@@ -98,7 +98,13 @@ io.on('connection', (socket) => {
             game, 
             ai, 
             aiType: 'classic',
-            currentModel: null
+            classicAlgorithm: 'minimax',
+            currentModel: null,
+            mctsParams: {
+                simulations: 1000,
+                exploration: 1.414,
+                timeLimit: 5
+            }
         });
         socket.emit('gameState', game.getState());
     });
@@ -147,6 +153,43 @@ io.on('connection', (socket) => {
         
         const { ai } = gameData;
         ai.maxDepth = Math.max(1, Math.min(5, depth));
+    });
+    
+    socket.on('setClassicAlgorithm', (algorithm) => {
+        const gameData = games.get(socket.id);
+        if (!gameData) return;
+        
+        // Store the algorithm preference - in full implementation this would
+        // switch between minimax and MCTS algorithms in the AI
+        gameData.classicAlgorithm = algorithm;
+        console.log(`Classic algorithm set to ${algorithm} for client ${socket.id}`);
+    });
+    
+    socket.on('setMctsParams', (params) => {
+        const gameData = games.get(socket.id);
+        if (!gameData) return;
+        
+        // Store MCTS parameters - in full implementation this would
+        // update the MCTS algorithm parameters
+        if (!gameData.mctsParams) {
+            gameData.mctsParams = {
+                simulations: 1000,
+                exploration: 1.414,
+                timeLimit: 5
+            };
+        }
+        
+        if (params.simulations !== undefined) {
+            gameData.mctsParams.simulations = Math.max(100, Math.min(5000, params.simulations));
+        }
+        if (params.exploration !== undefined) {
+            gameData.mctsParams.exploration = Math.max(0.5, Math.min(3.0, params.exploration));
+        }
+        if (params.timeLimit !== undefined) {
+            gameData.mctsParams.timeLimit = Math.max(1, Math.min(30, params.timeLimit));
+        }
+        
+        console.log(`MCTS parameters updated for client ${socket.id}:`, gameData.mctsParams);
     });
     
     socket.on('setAiType', (aiType) => {

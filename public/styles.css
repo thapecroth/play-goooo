@@ -571,3 +571,63 @@ h1 {
     width: 100%;
     max-width: 300px;
 }
+
+/* Algorithm selector */
+.algorithm-selector {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 5px;
+}
+
+.algorithm-selector label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+/* MCTS settings */
+.mcts-settings {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.mcts-param {
+    margin-bottom: 15px;
+}
+
+.mcts-param label {
+    display: inline-block;
+    width: 140px;
+    font-weight: normal;
+}
+
+.mcts-param input[type="range"] {
+    width: 150px;
+    vertical-align: middle;
+}
+
+.mcts-param span {
+    display: inline-block;
+    width: 50px;
+    text-align: right;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.mcts-info {
+    margin-top: 15px;
+    padding: 10px;
+    background: #e9ecef;
+    border-radius: 5px;
+    line-height: 1.6;
+}
+
+.mcts-info small {
+    color: #6c757d;
+}
+
+.minimax-settings {
+    margin-top: 10px;
+}

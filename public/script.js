@@ -21,7 +21,17 @@ const elements = {
     dqnAiSettings: document.querySelector('.dqn-ai-settings'),
     modelDetails: document.getElementById('model-details'),
     showQValuesCheckbox: document.getElementById('show-q-values'),
-    qValueLegend: document.getElementById('q-value-legend')
+    qValueLegend: document.getElementById('q-value-legend'),
+    // New MCTS elements
+    classicAlgorithmSelect: document.getElementById('classic-algorithm'),
+    minimaxSettings: document.querySelector('.minimax-settings'),
+    mctsSettings: document.querySelector('.mcts-settings'),
+    mctsSimulations: document.getElementById('mcts-simulations'),
+    mctsSimulationsValue: document.getElementById('mcts-simulations-value'),
+    mctsExploration: document.getElementById('mcts-exploration'),
+    mctsExplorationValue: document.getElementById('mcts-exploration-value'),
+    mctsTimeLimit: document.getElementById('mcts-time-limit'),
+    mctsTimeLimitValue: document.getElementById('mcts-time-limit-value')
 };
 
 elements.newGameBtn.addEventListener('click', startNewGame);
@@ -63,6 +73,33 @@ elements.showQValuesCheckbox.addEventListener('change', (e) => {
     } else {
         clearQValueVisualization();
     }
+});
+
+// Classic algorithm selection
+elements.classicAlgorithmSelect.addEventListener('change', (e) => {
+    const algorithm = e.target.value;
+    toggleClassicAlgorithmSettings(algorithm);
+    socket.emit('setClassicAlgorithm', algorithm);
+    showStatus(`Classic algorithm set to ${algorithm.toUpperCase()}`, 'info');
+});
+
+// MCTS parameter controls
+elements.mctsSimulations.addEventListener('input', (e) => {
+    const value = e.target.value;
+    elements.mctsSimulationsValue.textContent = value;
+    socket.emit('setMctsParams', { simulations: parseInt(value) });
+});
+
+elements.mctsExploration.addEventListener('input', (e) => {
+    const value = e.target.value;
+    elements.mctsExplorationValue.textContent = value;
+    socket.emit('setMctsParams', { exploration: parseFloat(value) });
+});
+
+elements.mctsTimeLimit.addEventListener('input', (e) => {
+    const value = e.target.value;
+    elements.mctsTimeLimitValue.textContent = value;
+    socket.emit('setMctsParams', { timeLimit: parseInt(value) });
 });
 
 socket.on('gameState', updateGameState);
@@ -299,6 +336,16 @@ function toggleAiSettings(aiType) {
         elements.showQValuesCheckbox.checked = false;
         elements.qValueLegend.style.display = 'none';
         clearQValueVisualization();
+    }
+}
+
+function toggleClassicAlgorithmSettings(algorithm) {
+    if (algorithm === 'mcts') {
+        elements.minimaxSettings.style.display = 'none';
+        elements.mctsSettings.style.display = 'block';
+    } else {
+        elements.minimaxSettings.style.display = 'block';
+        elements.mctsSettings.style.display = 'none';
     }
 }
 

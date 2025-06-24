@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import socketio
 from optimized_go import OptimizedGoGame, OptimizedGoAI
+from mcts_go import MCTSPlayer
 
 # Deep Q-Network for Go
 class GoDQN(nn.Module):
@@ -344,7 +345,9 @@ class GoAI:
         
         # Initialize optimized AI for classic moves
         self.optimized_ai = OptimizedGoAI(max_depth=self.max_depth)
+        self.mcts_ai = MCTSPlayer(simulations=1000, exploration_constant=1.414, time_limit=5.0)
         self.optimized_game = None  # Will be synced when needed
+        self.classic_algorithm = 'minimax'  # 'minimax' or 'mcts'
         
         # Load trained model if path provided and AI type is DQN
         if ai_type == 'dqn' and model_path:
@@ -365,6 +368,21 @@ class GoAI:
         """Switch between classic and DQN AI types"""
         self.ai_type = ai_type
         print(f"AI type switched to: {ai_type}")
+    
+    def set_classic_algorithm(self, algorithm: str):
+        """Switch between minimax and MCTS for classic AI"""
+        if algorithm in ['minimax', 'mcts']:
+            self.classic_algorithm = algorithm
+            print(f"Classic algorithm switched to: {algorithm}")
+    
+    def set_mcts_params(self, simulations: int = None, exploration: float = None, time_limit: int = None):
+        """Update MCTS parameters"""
+        if simulations is not None:
+            self.mcts_ai.simulations = simulations
+        if exploration is not None:
+            self.mcts_ai.exploration_constant = exploration
+        if time_limit is not None:
+            self.mcts_ai.time_limit = float(time_limit)
     
     def load_model(self, model_path: str) -> bool:
         """Load a DQN model from file"""
@@ -481,12 +499,16 @@ class GoAI:
             return board_q_values
     
     def get_classic_move(self, color: str) -> Optional[Dict]:
-        """Get move using optimized classic minimax algorithm"""
+        """Get move using selected classic algorithm (minimax or MCTS)"""
         # Sync game state to optimized representation
         self._sync_to_optimized_game()
         
-        # Get best move using optimized AI
-        best_move_tuple = self.optimized_ai.get_best_move(self.optimized_game, color)
+        if self.classic_algorithm == 'mcts':
+            # Use MCTS
+            best_move_tuple = self.mcts_ai.get_move(self.optimized_game, color)
+        else:
+            # Use minimax (default)
+            best_move_tuple = self.optimized_ai.get_best_move(self.optimized_game, color)
         
         if best_move_tuple is None:
             return None
@@ -915,6 +937,31 @@ async def setDqnModel(sid, model_name):
         print(f"DQN model {model_name} loaded for client {sid}")
     else:
         await sio.emit('modelError', f"Failed to load model: {model_name}", room=sid)
+
+@sio.event
+async def setClassicAlgorithm(sid, algorithm):
+    if sid not in games:
+        return
+    
+    game_data = games[sid]
+    ai = game_data['ai']
+    ai.set_classic_algorithm(algorithm)
+    print(f"Classic algorithm set to {algorithm} for client {sid}")
+
+@sio.event
+async def setMctsParams(sid, params):
+    if sid not in games:
+        return
+    
+    game_data = games[sid]
+    ai = game_data['ai']
+    
+    simulations = params.get('simulations')
+    exploration = params.get('exploration')
+    time_limit = params.get('timeLimit')
+    
+    ai.set_mcts_params(simulations=simulations, exploration=exploration, time_limit=time_limit)
+    print(f"MCTS parameters updated for client {sid}: {params}")
 
 @sio.event
 async def getQValues(sid, data):

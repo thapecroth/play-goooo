@@ -2,7 +2,7 @@
 Optimized Go game implementation for faster AI performance
 """
 import numpy as np
-from typing import Set, Tuple, Optional, List
+from typing import Set, Tuple, Optional, List, Dict
 from dataclasses import dataclass
 import numba
 from numba import njit, types
