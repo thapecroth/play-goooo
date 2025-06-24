@@ -600,7 +600,7 @@ def main():
     }
     
     print(f"Initializing DQN trainer with board size {args.board_size} and depth {args.depth}...")
-    trainer = GoDQNTrainer(**{k: v for k, v in config.items() if k not in ['num_episodes', 'save_freq', 'log_freq']})
+    trainer = GoDQNTrainer(**{k: v for k, v in config.items() if k not in ['num_episodes', 'save_freq', 'log_freq', 'episodes_per_batch']})
     
     print("Starting optimized training...")
     trainer.train(
