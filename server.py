@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import socketio
+from optimized_go import OptimizedGoGame, OptimizedGoAI
 
 # Deep Q-Network for Go
 class GoDQN(nn.Module):
@@ -341,6 +342,10 @@ class GoAI:
         self.current_model_path = None
         self.model_info = None
         
+        # Initialize optimized AI for classic moves
+        self.optimized_ai = OptimizedGoAI(max_depth=self.max_depth)
+        self.optimized_game = None  # Will be synced when needed
+        
         # Load trained model if path provided and AI type is DQN
         if ai_type == 'dqn' and model_path:
             self.load_model(model_path)
@@ -476,25 +481,42 @@ class GoAI:
             return board_q_values
     
     def get_classic_move(self, color: str) -> Optional[Dict]:
-        """Get move using classic minimax algorithm"""
-        valid_moves = self.game.get_valid_moves(color)
-        if not valid_moves:
+        """Get move using optimized classic minimax algorithm"""
+        # Sync game state to optimized representation
+        self._sync_to_optimized_game()
+        
+        # Get best move using optimized AI
+        best_move_tuple = self.optimized_ai.get_best_move(self.optimized_game, color)
+        
+        if best_move_tuple is None:
             return None
         
-        best_move = None
-        best_score = -float('inf')
+        # Convert back to dict format
+        return {'x': best_move_tuple[0], 'y': best_move_tuple[1]}
+    
+    def _sync_to_optimized_game(self):
+        """Sync current game state to optimized game representation"""
+        self.optimized_game = OptimizedGoGame(self.game.size)
         
-        for move in valid_moves:
-            score = self.evaluate_move(move['x'], move['y'], color)
-            if score > best_score:
-                best_score = score
-                best_move = move
+        # Copy board state
+        for y in range(self.game.size):
+            for x in range(self.game.size):
+                if self.game.board[y][x] == 'black':
+                    self.optimized_game.board[y, x] = 1
+                elif self.game.board[y][x] == 'white':
+                    self.optimized_game.board[y, x] = 2
         
-        # Don't make very bad moves
-        if best_score < -50:
-            return None
+        # Copy game state
+        self.optimized_game.current_player = 1 if self.game.current_player == 'black' else 2
+        self.optimized_game.captures = {1: self.game.captures['black'], 2: self.game.captures['white']}
+        self.optimized_game.passes = self.game.passes
+        self.optimized_game.game_over = self.game.game_over
+        self.optimized_game.winner = self.game.winner
+        if self.game.last_move:
+            self.optimized_game.last_move = (self.game.last_move['x'], self.game.last_move['y'])
         
-        return best_move
+        # Update max depth if needed
+        self.optimized_ai.max_depth = self.max_depth
     
     def game_to_tensor(self, player: str) -> torch.Tensor:
         """Convert game state to tensor for DQN input"""

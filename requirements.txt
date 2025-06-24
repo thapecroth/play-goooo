@@ -4,3 +4,4 @@ python-socketio>=5.10.0
 torch>=2.2.0
 numpy>=1.25.2
 python-multipart>=0.0.6
+numba>=0.58.0
