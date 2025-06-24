@@ -281,10 +281,10 @@ class OptimizedGoGame:
         return {
             'board': board_list,
             'currentPlayer': 'black' if self.current_player == BLACK else 'white',
-            'captures': {'black': self.captures[BLACK], 'white': self.captures[WHITE]},
+            'captures': {'black': int(self.captures[BLACK]), 'white': int(self.captures[WHITE])},
             'gameOver': self.game_over,
             'winner': self.winner,
-            'lastMove': {'x': self.last_move[0], 'y': self.last_move[1]} if self.last_move else None
+            'lastMove': {'x': int(self.last_move[0]), 'y': int(self.last_move[1])} if self.last_move else None
         }
 
 

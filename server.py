@@ -305,13 +305,19 @@ class GoGame:
         return moves
     
     def get_state(self):
+        # Ensure all values are JSON serializable
+        captures = {k: int(v) if hasattr(v, 'item') else v for k, v in self.captures.items()}
+        last_move = None
+        if self.last_move:
+            last_move = {k: int(v) if hasattr(v, 'item') else v for k, v in self.last_move.items()}
+        
         return {
             'board': self.board,
             'currentPlayer': self.current_player,
-            'captures': self.captures,
+            'captures': captures,
             'gameOver': self.game_over,
             'winner': self.winner,
-            'lastMove': self.last_move,
+            'lastMove': last_move,
             'score': self.calculate_score() if self.game_over else None
         }
     
@@ -514,7 +520,7 @@ class GoAI:
             return None
         
         # Convert back to dict format
-        return {'x': best_move_tuple[0], 'y': best_move_tuple[1]}
+        return {'x': int(best_move_tuple[0]), 'y': int(best_move_tuple[1])}
     
     def _sync_to_optimized_game(self):
         """Sync current game state to optimized game representation"""
