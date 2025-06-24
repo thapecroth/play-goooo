@@ -21,7 +21,8 @@ class GoGame {
             return false;
         }
         
-        if (color !== this.currentPlayer) {
+        // Only check turn order if not being called from getValidMoves
+        if (color !== this.currentPlayer && !this._allowAnyColor) {
             return false;
         }
         
@@ -256,16 +257,27 @@ class GoGame {
                 if (this.board[y][x] === null) {
                     const boardCopy = this.copyBoard();
                     const currentPlayerCopy = this.currentPlayer;
-                    this.currentPlayer = color;
+                    const capturesCopy = { ...this.captures };
+                    const historyCopy = [...this.history];
+                    const passesCopy = this.passes;
+                    const lastMoveCopy = this.lastMove;
+                    const koCopy = this.ko;
+                    
+                    this._allowAnyColor = true;
                     
                     if (this.makeMove(x, y, color)) {
                         moves.push({x, y});
-                        this.board = boardCopy;
-                        this.currentPlayer = currentPlayerCopy;
-                    } else {
-                        this.board = boardCopy;
-                        this.currentPlayer = currentPlayerCopy;
                     }
+                    
+                    // Restore all state
+                    this.board = boardCopy;
+                    this.currentPlayer = currentPlayerCopy;
+                    this.captures = capturesCopy;
+                    this.history = historyCopy;
+                    this.passes = passesCopy;
+                    this.lastMove = lastMoveCopy;
+                    this.ko = koCopy;
+                    this._allowAnyColor = false;
                 }
             }
         }

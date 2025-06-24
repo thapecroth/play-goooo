@@ -208,6 +208,9 @@ class OptimizedGoGame:
         
         if self.game_over or not (0 <= x < self.size and 0 <= y < self.size):
             return False
+            
+        if self.current_player != color_int:
+            return False
         
         if not self.is_valid_move(x, y, color_int):
             return False

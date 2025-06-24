@@ -130,15 +130,22 @@ class GoGame:
     
     def capture_stones(self, color: str) -> List[Dict]:
         captured = []
+        processed = set()
         
         for y in range(self.size):
             for x in range(self.size):
-                if self.board[y][x] == color:
+                if (self.board[y][x] == color and 
+                    f"{x},{y}" not in processed):
                     group = self.get_group(x, y)
                     if not self.group_has_liberties(group):
                         for stone in group:
                             self.board[stone['y']][stone['x']] = None
                             captured.append(stone)
+                            processed.add(f"{stone['x']},{stone['y']}")
+                    else:
+                        # Mark group as processed even if not captured
+                        for stone in group:
+                            processed.add(f"{stone['x']},{stone['y']}")
         
         return captured
     
