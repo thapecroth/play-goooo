@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Game</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Go Game</h1>
+        
+        <div class="game-info">
+            <div class="scores">
+                <div class="score black-score">
+                    <span class="player-name">Black (You)</span>
+                    <span class="captures">Captures: <span id="black-captures">0</span></span>
+                </div>
+                <div class="current-player">
+                    Current Turn: <span id="current-player">Black</span>
+                </div>
+                <div class="score white-score">
+                    <span class="player-name">White (AI)</span>
+                    <span class="captures">Captures: <span id="white-captures">0</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="board-container">
+            <div id="board" class="board"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="new-game" class="btn btn-primary">New Game</button>
+            <button id="pass" class="btn btn-secondary">Pass</button>
+            <button id="resign" class="btn btn-danger">Resign</button>
+        </div>
+        
+        <div class="game-status">
+            <div id="status-message"></div>
+        </div>
+        
+        <div class="board-size-selector">
+            <label for="board-size">Board Size:</label>
+            <select id="board-size">
+                <option value="9" selected>9x9</option>
+                <option value="13">13x13</option>
+                <option value="19">19x19</option>
+            </select>
+        </div>
+        
+        <div class="ai-settings">
+            <div class="ai-type-selector">
+                <label for="ai-type">AI Type:</label>
+                <select id="ai-type">
+                    <option value="classic" selected>Classic (Rule-based)</option>
+                    <option value="dqn">DQN (Neural Network)</option>
+                </select>
+            </div>
+            
+            <div class="classic-ai-settings">
+                <label for="ai-depth">AI Lookahead Steps:</label>
+                <select id="ai-depth">
+                    <option value="1">1 (Fast)</option>
+                    <option value="2">2 (Medium)</option>
+                    <option value="3" selected>3 (Default)</option>
+                    <option value="4">4 (Slow)</option>
+                    <option value="5">5 (Very Slow)</option>
+                </select>
+            </div>
+            
+            <div class="dqn-ai-settings" style="display: none;">
+                <label for="dqn-model">DQN Model:</label>
+                <select id="dqn-model">
+                    <option value="">Loading models...</option>
+                </select>
+                <div class="model-info">
+                    <span id="model-details"></span>
+                </div>
+                
+                <div class="dqn-visualization">
+                    <label>
+                        <input type="checkbox" id="show-q-values"> 
+                        Show Q-Values Visualization
+                    </label>
+                    <div class="visualization-legend" id="q-value-legend" style="display: none;">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ff4444;"></div>
+                            <span>Low Value</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #44ff44;"></div>
+                            <span>High Value</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
