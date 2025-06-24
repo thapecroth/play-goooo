@@ -100,13 +100,16 @@ class GoDQNTrainer:
         self.target_network.eval()
         
         # Compile networks for faster execution (PyTorch 2.0+)
-        if hasattr(torch, 'compile'):
+        # Note: Disabled torch.compile due to MPS compatibility issues
+        if hasattr(torch, 'compile') and not torch.backends.mps.is_available():
             try:
                 self.q_network = torch.compile(self.q_network)
                 self.target_network = torch.compile(self.target_network)
                 print("✓ Networks compiled for faster execution")
             except Exception as e:
                 print(f"Warning: Could not compile networks: {e}")
+        elif torch.backends.mps.is_available():
+            print("Note: torch.compile disabled for MPS compatibility")
         
         # Optimizer with optimized settings
         self.optimizer = optim.AdamW(  # AdamW often performs better than Adam
