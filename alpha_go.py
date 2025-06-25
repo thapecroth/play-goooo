@@ -137,6 +137,10 @@ class AlphaGoPlayer(MCTSPlayer):
         for _ in range(self.simulations):
             self._run_simulation(root)
 
+        # Early return if no children (no valid moves)
+        if not root.children:
+            return None
+
         if self.is_self_play:
             # Get moves and visit counts
             moves = [child.move for child in root.children]
@@ -163,8 +167,11 @@ class AlphaGoPlayer(MCTSPlayer):
             else:
                 best_move = None
         else:
-            best_child = max(root.children, key=lambda c: c.visits)
-            best_move = best_child.move
+            if root.children:
+                best_child = max(root.children, key=lambda c: c.visits)
+                best_move = best_child.move
+            else:
+                best_move = None
 
         return best_move
 
