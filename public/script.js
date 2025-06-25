@@ -50,6 +50,17 @@ elements.aiTypeSelect.addEventListener('change', (e) => {
     toggleAiSettings(aiType);
     socket.emit('setAiType', aiType);
     showStatus(`AI type set to ${aiType}`, 'info');
+    
+    // If switching to DQN and Q-values are enabled, request them
+    if (aiType === 'dqn' && elements.showQValuesCheckbox.checked) {
+        // Give the server a moment to switch AI type
+        setTimeout(() => {
+            requestQValues();
+        }, 100);
+    } else if (aiType !== 'dqn') {
+        // Clear Q-values if switching away from DQN
+        clearQValueVisualization();
+    }
 });
 
 elements.aiDepthSelect.addEventListener('change', (e) => {
@@ -79,8 +90,15 @@ elements.showQValuesCheckbox.addEventListener('change', (e) => {
     const showQValues = e.target.checked;
     elements.qValueLegend.style.display = showQValues ? 'flex' : 'none';
     
-    if (showQValues && elements.aiTypeSelect.value === 'dqn') {
-        requestQValues();
+    if (showQValues) {
+        if (elements.aiTypeSelect.value === 'dqn') {
+            requestQValues();
+            showStatus('Requesting Q-values...', 'info');
+        } else {
+            showStatus('Q-values only available for DQN AI type', 'warning');
+            e.target.checked = false;
+            elements.qValueLegend.style.display = 'none';
+        }
     } else {
         clearQValueVisualization();
     }
@@ -417,6 +435,13 @@ socket.on('availableModels', (data) => {
 socket.on('modelLoaded', (modelInfo) => {
     showStatus(`Model loaded: ${modelInfo.name}`, 'success');
     elements.modelDetails.textContent = `Loaded: ${modelInfo.boardSize}x${modelInfo.boardSize}, depth ${modelInfo.depth}`;
+    
+    // If Q-values visualization is enabled and we're in DQN mode, request Q-values
+    if (elements.showQValuesCheckbox.checked && elements.aiTypeSelect.value === 'dqn') {
+        setTimeout(() => {
+            requestQValues();
+        }, 100);
+    }
 });
 
 socket.on('modelError', (error) => {
@@ -504,7 +529,17 @@ socket.on('qValues', (data) => {
 });
 
 socket.on('qValuesError', (error) => {
-    showStatus(`Q-values error: ${error}`, 'error');
+    console.error('Q-values error:', error);
+    clearQValueVisualization();
+    
+    // Provide more helpful error messages
+    if (error.includes('not available for current AI type')) {
+        showStatus('Q-values only available for DQN AI type', 'error');
+    } else if (error.includes('No DQN model loaded')) {
+        showStatus('Please select a DQN model first', 'error');
+    } else {
+        showStatus(`Q-values error: ${error}`, 'error');
+    }
 });
 
 // Update Q-values when game state changes

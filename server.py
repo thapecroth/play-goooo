@@ -527,8 +527,39 @@ class GoAI:
     
     def get_q_values_for_visualization(self, color: str) -> Optional[List[List[float]]]:
         """Get Q-values for all board positions for visualization"""
-        if self.ai_type != 'dqn' or self.dqn is None:
+        if self.ai_type != 'dqn':
+            print(f"Q-values requested but AI type is {self.ai_type}, not dqn")
             return None
+        
+        if self.dqn is None:
+            print("Q-values requested but no DQN model is loaded")
+            # Try to load a default model if none is loaded
+            default_models = get_available_models('dqn')
+            if default_models:
+                # Try to find a model matching the current board size
+                matching_model = None
+                for model in default_models:
+                    if model['boardSize'] == self.game.size:
+                        matching_model = model['name']
+                        break
+                
+                # If no matching model, use the first available
+                if not matching_model and default_models:
+                    matching_model = default_models[0]['name']
+                
+                if matching_model:
+                    print(f"Auto-loading DQN model: {matching_model}")
+                    if self.load_model(matching_model):
+                        print(f"Successfully auto-loaded model: {matching_model}")
+                    else:
+                        print(f"Failed to auto-load model: {matching_model}")
+                        return None
+                else:
+                    print("No DQN models available to auto-load")
+                    return None
+            else:
+                print("No DQN models found in models directory")
+                return None
         
         with torch.no_grad():
             # Convert game state to tensor
