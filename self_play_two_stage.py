@@ -92,7 +92,7 @@ def play_against_classic_ai(args):
                 best_move = None
                 
                 for mv in legal_moves[:min(len(legal_moves), 20)]:  # Limit evaluation for speed
-                    score = classic_ai.evaluate_move(game.board, mv[0], mv[1], game.current_player, depth=ai_depth)
+                    score = classic_ai.evaluate_move(game.board, mv[0], mv[1], game.current_player)
                     if score > best_score:
                         best_score = score
                         best_move = mv
