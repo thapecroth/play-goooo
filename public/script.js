@@ -429,6 +429,28 @@ socket.on('availableModels', (data) => {
         option.value = '';
         option.textContent = 'No trained models available';
         selectElement.appendChild(option);
+    } else if (modelType === 'dqn' && models.length > 0) {
+        // Auto-select the first DQN model matching current board size
+        const currentBoardSize = parseInt(elements.boardSizeSelect.value);
+        let selectedModel = null;
+        
+        // First try to find a model matching the current board size
+        for (const model of models) {
+            if (model.boardSize === currentBoardSize) {
+                selectedModel = model.name;
+                break;
+            }
+        }
+        
+        // If no matching model, select the first one
+        if (!selectedModel) {
+            selectedModel = models[0].name;
+        }
+        
+        selectElement.value = selectedModel;
+        socket.emit('setDqnModel', selectedModel);
+        updateModelDetails(selectedModel);
+        console.log('Auto-selected DQN model:', selectedModel);
     }
 });
 
