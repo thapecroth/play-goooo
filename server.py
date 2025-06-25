@@ -14,6 +14,7 @@ import socketio
 from optimized_go import OptimizedGoGame, OptimizedGoAI
 from mcts_go import MCTSPlayer
 from alpha_go import PolicyValueNet, AlphaGoPlayer
+from classic_go_ai import ClassicGoAI, MCTSGoAI
 
 # Deep Q-Network for Go
 class GoDQN(nn.Module):
@@ -367,6 +368,11 @@ class GoAI:
         self.optimized_game = None  # Will be synced when needed
         self.classic_algorithm = 'minimax'  # 'minimax' or 'mcts'
         
+        # Initialize new classic AI engines
+        self.classic_ai = ClassicGoAI(board_size=game.size)
+        self.mcts_go_ai = MCTSGoAI(board_size=game.size, simulations=1000)
+        self.classic_engine = 'fast'  # 'fast' (new classic AI) or 'optimized' (old AI)
+        
         # Load trained model if path provided and AI type is DQN
         if ai_type == 'dqn' and model_path:
             self.load_model(model_path)
@@ -392,6 +398,12 @@ class GoAI:
         if algorithm in ['minimax', 'mcts']:
             self.classic_algorithm = algorithm
             print(f"Classic algorithm switched to: {algorithm}")
+    
+    def set_classic_engine(self, engine: str):
+        """Switch between fast and optimized classic engines"""
+        if engine in ['fast', 'optimized']:
+            self.classic_engine = engine
+            print(f"Classic engine switched to: {engine}")
     
     def set_mcts_params(self, simulations: int = None, exploration: float = None, time_limit: int = None):
         """Update MCTS parameters"""
@@ -545,22 +557,53 @@ class GoAI:
             return board_q_values
     
     def get_classic_move(self, color: str) -> Optional[Dict]:
-        """Get move using selected classic algorithm (minimax or MCTS)"""
-        # Sync game state to optimized representation
-        self._sync_to_optimized_game()
-        
-        if self.classic_algorithm == 'mcts':
-            # Use MCTS
-            best_move_tuple = self.mcts_ai.get_move(self.optimized_game, color)
+        """Get move using selected classic algorithm and engine"""
+        if self.classic_engine == 'fast':
+            # Use new fast classic AI engine
+            board_array = self._game_to_numpy_board()
+            player = 1 if color == 'black' else 2
+            
+            # Sync ko point
+            if self.game.ko:
+                self.classic_ai.ko_point = (self.game.ko['y'], self.game.ko['x'])
+                self.mcts_go_ai.ko_point = (self.game.ko['y'], self.game.ko['x'])
+            else:
+                self.classic_ai.ko_point = None
+                self.mcts_go_ai.ko_point = None
+            
+            if self.classic_algorithm == 'mcts':
+                move_tuple = self.mcts_go_ai.get_best_move_mcts(board_array, player)
+            else:
+                move_tuple = self.classic_ai.get_best_move(board_array, player, depth=self.max_depth)
+            
+            if move_tuple is None:
+                return None
+            
+            return {'x': int(move_tuple[1]), 'y': int(move_tuple[0])}
         else:
-            # Use minimax (default)
-            best_move_tuple = self.optimized_ai.get_best_move(self.optimized_game, color)
-        
-        if best_move_tuple is None:
-            return None
-        
-        # Convert back to dict format
-        return {'x': int(best_move_tuple[0]), 'y': int(best_move_tuple[1])}
+            # Use old optimized AI engine
+            self._sync_to_optimized_game()
+            
+            if self.classic_algorithm == 'mcts':
+                best_move_tuple = self.mcts_ai.get_move(self.optimized_game, color)
+            else:
+                best_move_tuple = self.optimized_ai.get_best_move(self.optimized_game, color)
+            
+            if best_move_tuple is None:
+                return None
+            
+            return {'x': int(best_move_tuple[0]), 'y': int(best_move_tuple[1])}
+    
+    def _game_to_numpy_board(self) -> np.ndarray:
+        """Convert game board to numpy array for classic AI"""
+        board_array = np.zeros((self.game.size, self.game.size), dtype=np.int32)
+        for y in range(self.game.size):
+            for x in range(self.game.size):
+                if self.game.board[y][x] == 'black':
+                    board_array[y, x] = 1
+                elif self.game.board[y][x] == 'white':
+                    board_array[y, x] = 2
+        return board_array
     
     def _sync_to_optimized_game(self):
         """Sync current game state to optimized game representation"""
@@ -1015,6 +1058,16 @@ async def setClassicAlgorithm(sid, algorithm):
     ai = game_data['ai']
     ai.set_classic_algorithm(algorithm)
     print(f"Classic algorithm set to {algorithm} for client {sid}")
+
+@sio.event
+async def setClassicEngine(sid, engine):
+    if sid not in games:
+        return
+    
+    game_data = games[sid]
+    ai = game_data['ai']
+    ai.set_classic_engine(engine)
+    print(f"Classic engine set to {engine} for client {sid}")
 
 @sio.event
 async def setMctsParams(sid, params):

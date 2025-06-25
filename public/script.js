@@ -25,6 +25,7 @@ const elements = {
     showQValuesCheckbox: document.getElementById('show-q-values'),
     qValueLegend: document.getElementById('q-value-legend'),
     // New MCTS elements
+    classicEngineSelect: document.getElementById('classic-engine'),
     classicAlgorithmSelect: document.getElementById('classic-algorithm'),
     minimaxSettings: document.querySelector('.minimax-settings'),
     mctsSettings: document.querySelector('.mcts-settings'),
@@ -83,6 +84,13 @@ elements.showQValuesCheckbox.addEventListener('change', (e) => {
     } else {
         clearQValueVisualization();
     }
+});
+
+// Classic engine selection
+elements.classicEngineSelect.addEventListener('change', (e) => {
+    const engine = e.target.value;
+    socket.emit('setClassicEngine', engine);
+    showStatus(`Classic engine set to ${engine}`, 'info');
 });
 
 // Classic algorithm selection
