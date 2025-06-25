@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const GoGame = require('./game/GoGame');
 const GoAI = require('./game/GoAI');
+const GoAIOptimized = require('./game/GoAIOptimized');
 
 const app = express();
 const server = http.createServer(app);
@@ -93,7 +94,8 @@ io.on('connection', (socket) => {
     
     socket.on('newGame', (boardSize) => {
         const game = new GoGame(boardSize || 9);
-        const ai = new GoAI(game);
+        // Use optimized AI by default
+        const ai = new GoAIOptimized(game);
         games.set(socket.id, { 
             game, 
             ai, 
@@ -152,7 +154,12 @@ io.on('connection', (socket) => {
         if (!gameData) return;
         
         const { ai } = gameData;
-        ai.maxDepth = Math.max(1, Math.min(5, depth));
+        const newDepth = Math.max(1, Math.min(5, depth));
+        if (ai.setDepth) {
+            ai.setDepth(newDepth);
+        } else {
+            ai.maxDepth = newDepth;
+        }
     });
     
     socket.on('setClassicAlgorithm', (algorithm) => {
