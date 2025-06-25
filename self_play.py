@@ -7,6 +7,7 @@ import random
 import os
 import pickle
 import argparse
+from tqdm import tqdm
 from optimized_go import OptimizedGoGame, BLACK, WHITE
 from alpha_go import PolicyValueNet, AlphaGoPlayer
 
@@ -20,7 +21,7 @@ class SelfPlayTrainer:
         self.best_model.load_state_dict(self.policy_value_net.state_dict())
 
     def collect_game_data(self, num_games=1):
-        for _ in range(num_games):
+        for _ in tqdm(range(num_games), desc="Playing self-play games", leave=False):
             game = OptimizedGoGame(self.board_size)
             player = AlphaGoPlayer(self.policy_value_net, simulations=100, is_self_play=True)
             game_data = []
@@ -97,7 +98,7 @@ class SelfPlayTrainer:
         best_player = AlphaGoPlayer(self.best_model, simulations=100)
         wins = 0
 
-        for i in range(num_games):
+        for i in tqdm(range(num_games), desc="Evaluating model", leave=False):
             game = OptimizedGoGame(self.board_size)
             p1 = current_player if i % 2 == 0 else best_player
             p2 = best_player if i % 2 == 0 else current_player
@@ -117,14 +118,19 @@ class SelfPlayTrainer:
         return wins / num_games
 
     def run(self, num_iterations=100, num_games_per_iter=25, batch_size=64, eval_games=10, win_ratio_to_update=0.55, model_name='best_alpha_go_model.pth'):
-        for i in range(num_iterations):
-            print(f"Iteration {i+1}/{num_iterations}")
+        for i in tqdm(range(num_iterations), desc="Training iterations"):
+            print(f"\nIteration {i+1}/{num_iterations}")
             self.collect_game_data(num_games_per_iter)
             
-            for _ in range(num_games_per_iter):
+            losses = []
+            for _ in tqdm(range(num_games_per_iter), desc="Training steps", leave=False):
                 loss = self.train_step(batch_size)
                 if loss:
-                    print(f"Loss: {loss:.4f}")
+                    losses.append(loss)
+            
+            if losses:
+                avg_loss = sum(losses) / len(losses)
+                print(f"Average loss: {avg_loss:.4f}")
 
             win_ratio = self.evaluate_model(eval_games)
             print(f"Win ratio against best model: {win_ratio:.2f}")
