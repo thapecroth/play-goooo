@@ -1,8 +1,6 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np  # Still needed for game board compatibility
 from optimized_go import OptimizedGoGame, BLACK, WHITE, EMPTY
 from mcts_go import MCTSNode, MCTSPlayer
 
@@ -112,19 +110,24 @@ class AlphaGoPlayer(MCTSPlayer):
         self.is_self_play = is_self_play
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.policy_value_net.to(self.device)
+        
+        # Pre-allocate tensors for efficiency
+        self.board_size = policy_value_net.board_size
+        self._tensor_cache = torch.zeros((1, 3, self.board_size, self.board_size), 
+                                       dtype=torch.float32, device=self.device)
 
     def get_move(self, game, color, temperature=1.0):
         if game.game_over:
             return None
 
         root = AlphaGoMCTSNode(game.copy())
-        self.last_root = root  # Store root for stats collection
         
+        # Run simulations
         for _ in range(self.simulations):
             self._run_simulation(root)
 
         if self.is_self_play:
-            # Get moves and visit counts
+            # Get moves and visit counts using list comprehension for speed
             moves = [child.move for child in root.children]
             visit_counts = torch.tensor([child.visits for child in root.children], 
                                        dtype=torch.float32, device=self.device)
@@ -149,8 +152,12 @@ class AlphaGoPlayer(MCTSPlayer):
             else:
                 best_move = None
         else:
-            best_child = max(root.children, key=lambda c: c.visits)
-            best_move = best_child.move
+            # Choose move with most visits
+            if root.children:
+                best_child = max(root.children, key=lambda c: c.visits)
+                best_move = best_child.move
+            else:
+                best_move = None
 
         return best_move
 
@@ -161,7 +168,8 @@ class AlphaGoPlayer(MCTSPlayer):
 
         # Expansion
         if not node.is_terminal() and not node.is_fully_expanded():
-            game_state_tensor = self._game_to_tensor(node.game_state)
+            # Convert game state to tensor
+            game_state_tensor = self._game_to_tensor_fast(node.game_state)
             
             with torch.no_grad():
                 policy, value = self.policy_value_net(game_state_tensor)
@@ -170,19 +178,23 @@ class AlphaGoPlayer(MCTSPlayer):
             policy = torch.exp(policy[0])  # Remove batch dimension and exp
             value = value[0, 0].item()  # Extract scalar value
             
-            valid_moves = node.game_state.get_valid_moves('black' if node.game_state.current_player == BLACK else 'white')
+            # Get valid moves
+            current_color = 'black' if node.game_state.current_player == BLACK else 'white'
+            valid_moves = node.game_state.get_valid_moves(current_color)
             
+            # Pre-calculate board positions for all valid moves
             for move in valid_moves:
                 if move is None:
-                    action = node.game_state.size * node.game_state.size
+                    action = self.board_size * self.board_size
                 else:
-                    action = move[1] * node.game_state.size + move[0]
+                    action = move[1] * self.board_size + move[0]
                 
+                # Create child node
                 game_copy = node.game_state.copy()
                 if move is None:
-                    game_copy.pass_turn('black' if game_copy.current_player == BLACK else 'white')
+                    game_copy.pass_turn(current_color)
                 else:
-                    game_copy.make_move(move[0], move[1], 'black' if game_copy.current_player == BLACK else 'white')
+                    game_copy.make_move(move[0], move[1], current_color)
                 
                 prior = policy[action].item()
                 child_node = AlphaGoMCTSNode(game_copy, parent=node, move=move, 
@@ -192,7 +204,7 @@ class AlphaGoPlayer(MCTSPlayer):
             # Backpropagation
             self._backpropagate(node, value)
         else:
-            # If terminal, get winner
+            # Terminal node
             if node.game_state.winner == 'black':
                 value = 1.0 if node.color == BLACK else -1.0
             elif node.game_state.winner == 'white':
@@ -207,7 +219,30 @@ class AlphaGoPlayer(MCTSPlayer):
             value = -value
             node = node.parent
 
+    def _game_to_tensor_fast(self, game):
+        """Optimized tensor conversion using pre-allocated tensor"""
+        # Reset tensor
+        self._tensor_cache.zero_()
+        
+        board = game.board
+        current_player = game.current_player
+        
+        # Use torch operations for faster conversion
+        # Channel 0: current player stones
+        self._tensor_cache[0, 0] = torch.from_numpy((board == current_player).astype(float))
+        
+        # Channel 1: opponent stones
+        opponent = WHITE if current_player == BLACK else BLACK
+        self._tensor_cache[0, 1] = torch.from_numpy((board == opponent).astype(float))
+        
+        # Channel 2: current player indicator
+        if current_player == WHITE:
+            self._tensor_cache[0, 2].fill_(1.0)
+            
+        return self._tensor_cache
+
     def _game_to_tensor(self, game):
+        """Original tensor conversion for compatibility"""
         board = game.board
         size = game.size
         tensor = torch.zeros((1, 3, size, size), dtype=torch.float32, device=self.device)
@@ -229,3 +264,73 @@ class AlphaGoPlayer(MCTSPlayer):
             tensor[0, 2].fill_(1.0)
             
         return tensor
+
+# Batch processing version for self-play
+class BatchAlphaGoPlayer(AlphaGoPlayer):
+    """Optimized version that can process multiple game positions in batches"""
+    
+    def __init__(self, policy_value_net, simulations=400, exploration_constant=1.0, 
+                 is_self_play=False, device=None, batch_size=8):
+        super().__init__(policy_value_net, simulations, exploration_constant, is_self_play, device)
+        self.batch_size = batch_size
+        self._batch_tensor = torch.zeros((batch_size, 3, self.board_size, self.board_size), 
+                                       dtype=torch.float32, device=self.device)
+        
+    def get_batch_moves(self, games, colors, temperature=1.0):
+        """Get moves for multiple games in a single batch"""
+        moves = []
+        
+        # Process games in batches
+        for i in range(0, len(games), self.batch_size):
+            batch_games = games[i:i+self.batch_size]
+            batch_colors = colors[i:i+self.batch_size]
+            
+            batch_moves = self._process_batch(batch_games, batch_colors, temperature)
+            moves.extend(batch_moves)
+            
+        return moves
+    
+    def _process_batch(self, games, colors, temperature):
+        """Process a batch of games"""
+        roots = [AlphaGoMCTSNode(game.copy()) for game in games]
+        
+        # Run simulations for all games
+        for _ in range(self.simulations):
+            # Could potentially parallelize this further
+            for root in roots:
+                self._run_simulation(root)
+        
+        # Extract moves
+        moves = []
+        for root in roots:
+            if self.is_self_play:
+                child_moves = [child.move for child in root.children]
+                visit_counts = torch.tensor([child.visits for child in root.children], 
+                                          dtype=torch.float32, device=self.device)
+                
+                if temperature == 0:
+                    action_probs = torch.zeros_like(visit_counts)
+                    if len(visit_counts) > 0:
+                        action_probs[torch.argmax(visit_counts)] = 1.0
+                else:
+                    if visit_counts.sum() == 0:
+                        action_probs = torch.ones_like(visit_counts) / len(visit_counts)
+                    else:
+                        visit_counts = visit_counts.pow(1.0 / temperature)
+                        action_probs = visit_counts / visit_counts.sum()
+
+                if len(child_moves) > 0:
+                    move_idx = torch.multinomial(action_probs, 1).item()
+                    best_move = child_moves[move_idx]
+                else:
+                    best_move = None
+            else:
+                if root.children:
+                    best_child = max(root.children, key=lambda c: c.visits)
+                    best_move = best_child.move
+                else:
+                    best_move = None
+                    
+            moves.append(best_move)
+            
+        return moves

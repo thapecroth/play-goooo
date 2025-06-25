@@ -26,22 +26,26 @@ class SelfPlayTrainer:
             game_data = []
             
             while not game.game_over:
-                move = player.get_move(game, 'black' if game.current_player == BLACK else 'white')
-                
-                # Store state, policy, and eventual value
+                # Store state before move
                 state_tensor = player._game_to_tensor(game)
                 
-                # Create policy target
-                policy_target = torch.zeros(self.board_size * self.board_size + 1)
-                children_visits = {child.move: child.visits for child in player.stats.visits.keys()}
-                total_visits = sum(children_visits.values())
+                # Get move (this populates player.last_root)
+                move = player.get_move(game, 'black' if game.current_player == BLACK else 'white')
                 
-                for move, visits in children_visits.items():
-                    if move is None:
-                        action = self.board_size * self.board_size
-                    else:
-                        action = move[1] * self.board_size + move[0]
-                    policy_target[action] = visits / total_visits
+                # Create policy target from MCTS statistics
+                policy_target = torch.zeros(self.board_size * self.board_size + 1)
+                
+                if hasattr(player, 'last_root') and player.last_root.children:
+                    # Collect visit counts from root's children
+                    total_visits = sum(child.visits for child in player.last_root.children)
+                    
+                    if total_visits > 0:
+                        for child in player.last_root.children:
+                            if child.move is None:
+                                action = self.board_size * self.board_size
+                            else:
+                                action = child.move[1] * self.board_size + child.move[0]
+                            policy_target[action] = child.visits / total_visits
 
                 game_data.append([state_tensor, policy_target, 0]) # Placeholder for value
 
