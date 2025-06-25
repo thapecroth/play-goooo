@@ -21,8 +21,13 @@ class SelfPlayTrainer:
         self.best_model = PolicyValueNet(board_size, num_blocks=num_blocks)
         self.best_model.load_state_dict(self.policy_value_net.state_dict())
         
-        # Add device management
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # Add device management - Default to MPS on Mac, then CUDA, then CPU
+        if torch.backends.mps.is_available():
+            self.device = torch.device('mps')
+        elif torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
         self.policy_value_net.to(self.device)
         self.best_model.to(self.device)
         print(f"Using device: {self.device}")
