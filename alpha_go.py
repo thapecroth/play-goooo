@@ -79,6 +79,11 @@ class AlphaGoMCTSNode(MCTSNode):
         super().__init__(game_state, parent, move, color)
         self.prior = prior
         self.value_sum = 0.0
+        self._expanded = False
+
+    def is_fully_expanded(self):
+        """Check if node has been expanded (all children added)"""
+        return self._expanded or self.is_terminal()
 
     def get_best_child(self, exploration_constant):
         best_value = -float('inf')
@@ -157,7 +162,10 @@ class AlphaGoPlayer(MCTSPlayer):
     def _run_simulation(self, node):
         # Selection
         while not node.is_terminal() and node.is_fully_expanded():
-            node = node.get_best_child(self.exploration_constant)
+            best_child = node.get_best_child(self.exploration_constant)
+            if best_child is None:
+                break
+            node = best_child
 
         # Expansion
         if not node.is_terminal() and not node.is_fully_expanded():
@@ -171,6 +179,12 @@ class AlphaGoPlayer(MCTSPlayer):
             value = value[0, 0].item()  # Extract scalar value
             
             valid_moves = node.game_state.get_valid_moves('black' if node.game_state.current_player == BLACK else 'white')
+            
+            # If no valid moves, mark as expanded and skip
+            if not valid_moves:
+                node._expanded = True
+                self._backpropagate(node, value)
+                return
             
             for move in valid_moves:
                 if move is None:
@@ -188,6 +202,9 @@ class AlphaGoPlayer(MCTSPlayer):
                 child_node = AlphaGoMCTSNode(game_copy, parent=node, move=move, 
                                            color=node.game_state.current_player, prior=prior)
                 node.children.append(child_node)
+            
+            # Mark node as expanded
+            node._expanded = True
             
             # Backpropagation
             self._backpropagate(node, value)
