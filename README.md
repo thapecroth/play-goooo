@@ -29,6 +29,13 @@ python train_dqn.py --depth 12 --learning-rate 0.0001 --batch-size 128 --num-wor
 python train_dqn.py --episodes-per-batch 8 --batch-size 128 --num-workers 8  # Maximum speed
 python train_dqn.py --no-mixed-precision  # Disable mixed precision if issues occur
 python train_dqn.py --buffer-capacity 100000  # Larger replay buffer for better learning
+
+# Train AlphaGo model
+python self_play.py
+
+# Train AlphaGo model with custom parameters
+python self_play.py --board-size 13 --num-iterations 50
+python self_play.py --learning-rate 1e-4 --buffer-size 20000
 ```
 
 ### Dependencies

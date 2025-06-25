@@ -6,6 +6,7 @@ from collections import deque
 import random
 import os
 import pickle
+import argparse
 from optimized_go import OptimizedGoGame, BLACK, WHITE
 from alpha_go import PolicyValueNet, AlphaGoPlayer
 
@@ -111,7 +112,7 @@ class SelfPlayTrainer:
         
         return wins / num_games
 
-    def run(self, num_iterations=100, num_games_per_iter=25, batch_size=64, eval_games=10, win_ratio_to_update=0.55):
+    def run(self, num_iterations=100, num_games_per_iter=25, batch_size=64, eval_games=10, win_ratio_to_update=0.55, model_name='best_alpha_go_model.pth'):
         for i in range(num_iterations):
             print(f"Iteration {i+1}/{num_iterations}")
             self.collect_game_data(num_games_per_iter)
@@ -127,7 +128,7 @@ class SelfPlayTrainer:
             if win_ratio > win_ratio_to_update:
                 print("New best model found!")
                 self.best_model.load_state_dict(self.policy_value_net.state_dict())
-                self.save_model('best_alpha_go_model.pth')
+                self.save_model(model_name)
 
     def save_model(self, filename):
         os.makedirs('models', exist_ok=True)
@@ -142,6 +143,33 @@ class SelfPlayTrainer:
             print(f"Model loaded from {filepath}")
 
 if __name__ == '__main__':
-    trainer = SelfPlayTrainer()
-    trainer.load_model('best_alpha_go_model.pth')
-    trainer.run()
+    parser = argparse.ArgumentParser(description='Train an AlphaGo model through self-play.')
+    parser.add_argument('--board-size', type=int, default=9, help='Size of the Go board (e.g., 9, 13, 19).')
+    parser.add_argument('--num-blocks', type=int, default=5, help='Number of residual blocks in the policy-value network.')
+    parser.add_argument('--learning-rate', type=float, default=1e-3, help='Learning rate for the optimizer.')
+    parser.add_argument('--buffer-size', type=int, default=10000, help='Size of the replay buffer.')
+    parser.add_argument('--num-iterations', type=int, default=100, help='Number of training iterations.')
+    parser.add_argument('--num-games-per-iter', type=int, default=25, help='Number of self-play games to generate per iteration.')
+    parser.add_argument('--batch-size', type=int, default=64, help='Batch size for training the neural network.')
+    parser.add_argument('--eval-games', type=int, default=10, help='Number of games to play for model evaluation.')
+    parser.add_argument('--win-ratio-to-update', type=float, default=0.55, help='Win ratio needed to update the best model.')
+    parser.add_argument('--model-name', type=str, default='best_alpha_go_model.pth', help='Filename for saving the best model.')
+    
+    args = parser.parse_args()
+
+    trainer = SelfPlayTrainer(
+        board_size=args.board_size,
+        num_blocks=args.num_blocks,
+        learning_rate=args.learning_rate,
+        buffer_size=args.buffer_size
+    )
+    
+    trainer.load_model(args.model_name)
+    trainer.run(
+        num_iterations=args.num_iterations,
+        num_games_per_iter=args.num_games_per_iter,
+        batch_size=args.batch_size,
+        eval_games=args.eval_games,
+        win_ratio_to_update=args.win_ratio_to_update,
+        model_name=args.model_name
+    )
