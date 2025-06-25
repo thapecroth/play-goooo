@@ -1118,20 +1118,27 @@ async def setMctsParams(sid, params):
 @sio.event
 async def getQValues(sid, data):
     if sid not in games:
+        print(f"getQValues: No game found for sid {sid}")
         return
     
     game_data = games[sid]
     ai = game_data['ai']
     color = data.get('color', 'black')
     
+    print(f"getQValues: Requesting Q-values for {color}, AI type: {ai.ai_type}")
     q_values = ai.get_q_values_for_visualization(color)
     if q_values is not None:
+        print(f"getQValues: Successfully got Q-values, shape: {len(q_values)}x{len(q_values[0]) if q_values else 0}")
         await sio.emit('qValues', {
             'qValues': q_values,
             'color': color
         }, room=sid)
     else:
-        await sio.emit('qValuesError', 'Q-values not available for current AI type', room=sid)
+        error_msg = 'Q-values not available for current AI type'
+        if ai.ai_type == 'dqn' and ai.dqn is None:
+            error_msg = 'No DQN model loaded. Please select a model first.'
+        print(f"getQValues: Failed to get Q-values - {error_msg}")
+        await sio.emit('qValuesError', error_msg, room=sid)
 
 @sio.event
 async def resign(sid):

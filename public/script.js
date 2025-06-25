@@ -452,8 +452,12 @@ socket.on('modelError', (error) => {
 let currentQValues = null;
 
 function requestQValues() {
+    console.log('requestQValues called, AI type:', elements.aiTypeSelect.value, 'gameState:', !!gameState);
     if (gameState && elements.aiTypeSelect.value === 'dqn') {
+        console.log('Emitting getQValues request');
         socket.emit('getQValues', { color: 'black' });
+    } else {
+        console.log('Not requesting Q-values - conditions not met');
     }
 }
 
@@ -523,8 +527,11 @@ function renderQValues(qValues) {
 }
 
 socket.on('qValues', (data) => {
+    console.log('Received qValues:', data);
     if (elements.showQValuesCheckbox.checked) {
         renderQValues(data.qValues);
+    } else {
+        console.log('Q-values checkbox not checked, ignoring');
     }
 });
 
