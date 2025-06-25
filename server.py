@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 import socketio
 from optimized_go import OptimizedGoGame, OptimizedGoAI
 from mcts_go import MCTSPlayer
+from alpha_go import PolicyValueNet, AlphaGoPlayer
 
 # Deep Q-Network for Go
 class GoDQN(nn.Module):
@@ -348,6 +349,10 @@ class GoAI:
         self.dqn = None
         self.current_model_path = None
         self.model_info = None
+
+        # Initialize AlphaGo
+        self.alpha_go_net = None
+        self.alpha_go_player = None
         
         # Initialize optimized AI for classic moves
         self.optimized_ai = OptimizedGoAI(max_depth=self.max_depth)
@@ -425,6 +430,24 @@ class GoAI:
         except Exception as e:
             print(f"Error loading model {model_path}: {e}")
             return False
+
+    def load_alpha_go_model(self, model_path: str) -> bool:
+        full_path = os.path.join('models', model_path) if not model_path.startswith('models/') else model_path
+        
+        if not os.path.exists(full_path):
+            print(f"Model file not found: {full_path}")
+            return False
+        
+        try:
+            self.alpha_go_net = PolicyValueNet(self.game.size)
+            self.alpha_go_net.load_state_dict(torch.load(full_path, map_location=self.device))
+            self.alpha_go_net.eval()
+            self.alpha_go_player = AlphaGoPlayer(self.alpha_go_net)
+            print(f"Successfully loaded AlphaGo model: {model_path}")
+            return True
+        except Exception as e:
+            print(f"Error loading AlphaGo model {model_path}: {e}")
+            return False
     
     def get_best_move(self, color: str) -> Optional[Dict]:
         valid_moves = self.game.get_valid_moves(color)
@@ -433,6 +456,8 @@ class GoAI:
         
         if self.ai_type == 'dqn' and self.dqn is not None:
             return self.get_dqn_move(color)
+        elif self.ai_type == 'alpha_go' and self.alpha_go_player is not None:
+            return self.get_alpha_go_move(color)
         else:
             return self.get_classic_move(color)
     
@@ -472,6 +497,14 @@ class GoAI:
                 return self.get_classic_move(color)
             
             return best_move
+
+    def get_alpha_go_move(self, color: str) -> Optional[Dict]:
+        self._sync_to_optimized_game()
+        best_move_tuple = self.alpha_go_player.get_move(self.optimized_game, color)
+        if best_move_tuple is None:
+            return None
+        return {'x': int(best_move_tuple[0]), 'y': int(best_move_tuple[1])}
+
     
     def get_q_values_for_visualization(self, color: str) -> Optional[List[List[float]]]:
         """Get Q-values for all board positions for visualization"""
@@ -800,14 +833,20 @@ async def read_index():
 # Game storage
 games: Dict[str, Dict] = {}
 
-def get_available_models() -> List[Dict]:
+def get_available_models(model_type: str) -> List[Dict]:
     """Get list of available trained models"""
     models_dir = "models"
     if not os.path.exists(models_dir):
         return []
     
     models = []
-    for file in glob.glob(os.path.join(models_dir, "*.pth")):
+    file_pattern = "*.pth"
+    if model_type == 'dqn':
+        file_pattern = "dqn_*.pth"
+    elif model_type == 'alpha_go':
+        file_pattern = "alpha_go_*.pth"
+
+    for file in glob.glob(os.path.join(models_dir, file_pattern)):
         filename = os.path.basename(file)
         
         # Parse model info from filename
@@ -925,9 +964,25 @@ async def setAiType(sid, ai_type):
     print(f"AI type set to {ai_type} for client {sid}")
 
 @sio.event
-async def getAvailableModels(sid):
-    models = get_available_models()
-    await sio.emit('availableModels', models, room=sid)
+async def getAvailableModels(sid, data):
+    model_type = data.get('modelType', 'all')
+    models = get_available_models(model_type)
+    await sio.emit('availableModels', {'modelType': model_type, 'models': models}, room=sid)
+
+@sio.event
+async def setAlphaGoModel(sid, model_name):
+    if sid not in games:
+        return
+    
+    game_data = games[sid]
+    ai = game_data['ai']
+    
+    if ai.load_alpha_go_model(model_name):
+        game_data['current_model'] = model_name
+        await sio.emit('modelLoaded', {'name': model_name}, room=sid)
+        print(f"AlphaGo model {model_name} loaded for client {sid}")
+    else:
+        await sio.emit('modelError', f"Failed to load model: {model_name}", room=sid)
 
 @sio.event
 async def setDqnModel(sid, model_name):

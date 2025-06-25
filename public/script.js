@@ -17,8 +17,10 @@ const elements = {
     aiTypeSelect: document.getElementById('ai-type'),
     aiDepthSelect: document.getElementById('ai-depth'),
     dqnModelSelect: document.getElementById('dqn-model'),
+    alphaGoModelSelect: document.getElementById('alpha-go-model'),
     classicAiSettings: document.querySelector('.classic-ai-settings'),
     dqnAiSettings: document.querySelector('.dqn-ai-settings'),
+    alphaGoAiSettings: document.querySelector('.alpha-go-ai-settings'),
     modelDetails: document.getElementById('model-details'),
     showQValuesCheckbox: document.getElementById('show-q-values'),
     qValueLegend: document.getElementById('q-value-legend'),
@@ -61,6 +63,14 @@ elements.dqnModelSelect.addEventListener('change', (e) => {
         socket.emit('setDqnModel', modelName);
         updateModelDetails(modelName);
         showStatus(`DQN model set to ${modelName}`, 'info');
+    }
+});
+
+elements.alphaGoModelSelect.addEventListener('change', (e) => {
+    const modelName = e.target.value;
+    if (modelName) {
+        socket.emit('setAlphaGoModel', modelName);
+        showStatus(`AlphaGo model set to ${modelName}`, 'info');
     }
 });
 
@@ -319,18 +329,23 @@ function stopAiThinking() {
 }
 
 function toggleAiSettings(aiType) {
+    elements.classicAiSettings.style.display = 'none';
+    elements.dqnAiSettings.style.display = 'none';
+    elements.alphaGoAiSettings.style.display = 'none';
+
     if (aiType === 'dqn') {
-        elements.classicAiSettings.style.display = 'none';
         elements.dqnAiSettings.style.display = 'block';
-        loadAvailableModels();
+        loadAvailableModels('dqn');
         
         // Enable Q-values visualization if checked
         if (elements.showQValuesCheckbox.checked) {
             setTimeout(() => requestQValues(), 200);
         }
+    } else if (aiType === 'alpha_go') {
+        elements.alphaGoAiSettings.style.display = 'block';
+        loadAvailableModels('alpha_go');
     } else {
         elements.classicAiSettings.style.display = 'block';
-        elements.dqnAiSettings.style.display = 'none';
         
         // Disable Q-values visualization
         elements.showQValuesCheckbox.checked = false;
@@ -349,8 +364,8 @@ function toggleClassicAlgorithmSettings(algorithm) {
     }
 }
 
-function loadAvailableModels() {
-    socket.emit('getAvailableModels');
+function loadAvailableModels(modelType) {
+    socket.emit('getAvailableModels', { modelType });
 }
 
 function updateModelDetails(modelName) {
@@ -361,22 +376,33 @@ function updateModelDetails(modelName) {
 }
 
 // Socket event handlers for AI management
-socket.on('availableModels', (models) => {
-    elements.dqnModelSelect.innerHTML = '<option value="">Select a model...</option>';
+socket.on('availableModels', (data) => {
+    const { modelType, models } = data;
+    let selectElement;
+
+    if (modelType === 'dqn') {
+        selectElement = elements.dqnModelSelect;
+    } else if (modelType === 'alpha_go') {
+        selectElement = elements.alphaGoModelSelect;
+    } else {
+        return;
+    }
+
+    selectElement.innerHTML = '<option value="">Select a model...</option>';
     
     models.forEach(model => {
         const option = document.createElement('option');
         option.value = model.name;
         option.textContent = `${model.name} (${model.boardSize}x${model.boardSize}, depth ${model.depth})`;
         option.dataset.details = `Board: ${model.boardSize}x${model.boardSize}, Depth: ${model.depth}, Episodes: ${model.episodes || 'Unknown'}`;
-        elements.dqnModelSelect.appendChild(option);
+        selectElement.appendChild(option);
     });
     
     if (models.length === 0) {
         const option = document.createElement('option');
         option.value = '';
         option.textContent = 'No trained models available';
-        elements.dqnModelSelect.appendChild(option);
+        selectElement.appendChild(option);
     }
 });
 

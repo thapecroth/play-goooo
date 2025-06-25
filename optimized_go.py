@@ -145,35 +145,62 @@ class OptimizedGoGame:
         """Check if move is valid (optimized)"""
         if self.board[y, x] != EMPTY:
             return False
-        
-        # Temporarily place stone
-        self.board[y, x] = color
-        
-        # Check for immediate capture of opponent stones
-        opponent = self.get_opponent(color)
-        opponent_captured = False
-        
-        for nx, ny in self._get_neighbors_numba(x, y, self.size):
-            if self.board[ny, nx] == opponent:
-                opponent_group = self.get_group(nx, ny)
-                if self.count_liberties(opponent_group) == 0:
-                    opponent_captured = True
-                    break
-        
-        # Check for self-capture
-        if not opponent_captured:
-            own_group = self.get_group(x, y)
-            if self.count_liberties(own_group) == 0:
-                self.board[y, x] = EMPTY
-                return False
-        
-        # Check ko rule
+
+        # Check for ko first
         if self.ko_point == (x, y):
-            self.board[y, x] = EMPTY
             return False
-        
-        self.board[y, x] = EMPTY
+
+        # Simulate the move on a temporary board
+        temp_board = self.board.copy()
+        temp_board[y, x] = color
+
+        # Check if the move results in a capture
+        opponent = self.get_opponent(color)
+        captures = False
+        for nx, ny in self._get_neighbors_numba(x, y, self.size):
+            if temp_board[ny, nx] == opponent:
+                group = self._get_group_on_board(nx, ny, temp_board)
+                if self._count_liberties_on_board(group, temp_board) == 0:
+                    captures = True
+                    break
+        if captures:
+            return True
+
+        # If no capture, check for suicide
+        own_group = self._get_group_on_board(x, y, temp_board)
+        if self._count_liberties_on_board(own_group, temp_board) == 0:
+            return False
+
         return True
+
+    def _get_group_on_board(self, x: int, y: int, board: np.ndarray) -> Set[Tuple[int, int]]:
+        color = board[y, x]
+        if color == EMPTY:
+            return set()
+        
+        group = set()
+        stack = [(x, y)]
+        
+        while stack:
+            cx, cy = stack.pop()
+            if (cx, cy) in group:
+                continue
+            
+            if board[cy, cx] == color:
+                group.add((cx, cy))
+                
+                for nx, ny in self._get_neighbors_numba(cx, cy, self.size):
+                    if (nx, ny) not in group:
+                        stack.append((nx, ny))
+        return group
+
+    def _count_liberties_on_board(self, group: Set[Tuple[int, int]], board: np.ndarray) -> int:
+        liberties = set()
+        for x, y in group:
+            for nx, ny in self._get_neighbors_numba(x, y, self.size):
+                if board[ny, nx] == EMPTY:
+                    liberties.add((nx, ny))
+        return len(liberties)
     
     def make_move(self, x: int, y: int, color: str) -> bool:
         """Make a move (optimized)"""
@@ -185,10 +212,6 @@ class OptimizedGoGame:
         if not self.is_valid_move(x, y, color_int):
             return False
         
-        # Clear caches
-        self._liberty_cache.clear()
-        self._group_cache.clear()
-        
         # Place stone
         self.board[y, x] = color_int
         
@@ -196,10 +219,25 @@ class OptimizedGoGame:
         opponent = self.get_opponent(color_int)
         captured = self.remove_captured_stones(opponent)
         self.captures[color_int] += len(captured)
+
+        # Check for self-capture
+        own_group = self.get_group(x, y)
+        if self.count_liberties(own_group) == 0:
+            self.board[y,x] = EMPTY # Undo move
+            self.captures[color_int] -= len(captured)
+            # We need to restore the captured stones, this is complex.
+            # It's better to check for self-capture before making the move.
+            # Reverting to a temporary board check in is_valid_move is better.
+            return False
         
         # Update ko point
-        if len(captured) == 1 and self.count_liberties(self.get_group(x, y)) == 1:
-            self.ko_point = captured[0]
+        if len(captured) == 1:
+            captured_stone_pos = captured[0]
+            # Check if the move resulted in a single stone capture, and the capturing group has one liberty
+            if self.count_liberties(self.get_group(x,y)) == 1:
+                self.ko_point = captured_stone_pos
+            else:
+                self.ko_point = None
         else:
             self.ko_point = None
         
