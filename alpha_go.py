@@ -115,7 +115,16 @@ class AlphaGoPlayer(MCTSPlayer):
         super().__init__(simulations=simulations, exploration_constant=exploration_constant)
         self.policy_value_net = policy_value_net
         self.is_self_play = is_self_play
-        self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # Default to MPS on Mac, then CUDA, then CPU
+        if device is None:
+            if torch.backends.mps.is_available():
+                self.device = torch.device('mps')
+            elif torch.cuda.is_available():
+                self.device = torch.device('cuda')
+            else:
+                self.device = torch.device('cpu')
+        else:
+            self.device = device
         self.policy_value_net.to(self.device)
 
     def get_move(self, game, color, temperature=1.0):
