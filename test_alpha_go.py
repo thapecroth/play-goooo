@@ -8,7 +8,13 @@ from optimized_go import OptimizedGoGame, BLACK, WHITE, EMPTY
 class TestAlphaGo(unittest.TestCase):
     def setUp(self):
         self.board_size = 9
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # Default to MPS on Mac, then CUDA, then CPU
+        if torch.backends.mps.is_available():
+            self.device = torch.device('mps')
+        elif torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
         self.net = PolicyValueNet(board_size=self.board_size).to(self.device)
         self.net.eval()
         

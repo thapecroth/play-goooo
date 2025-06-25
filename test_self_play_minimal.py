@@ -17,7 +17,13 @@ def test_single_move():
     
     # Create a simple network
     policy_value_net = PolicyValueNet(board_size, num_blocks=2)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Default to MPS on Mac, then CUDA, then CPU
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     policy_value_net.to(device)
     
     # Create player with minimal simulations
@@ -46,7 +52,13 @@ def test_full_game():
     game = OptimizedGoGame(board_size)
     
     policy_value_net = PolicyValueNet(board_size, num_blocks=2)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Default to MPS on Mac, then CUDA, then CPU
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     policy_value_net.to(device)
     
     player = AlphaGoPlayer(policy_value_net, simulations=10, device=device, is_self_play=True)
@@ -99,7 +111,13 @@ def test_mcts_expansion():
     game = OptimizedGoGame(board_size)
     
     policy_value_net = PolicyValueNet(board_size, num_blocks=2)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Default to MPS on Mac, then CUDA, then CPU
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     policy_value_net.to(device)
     
     player = AlphaGoPlayer(policy_value_net, simulations=1, device=device)

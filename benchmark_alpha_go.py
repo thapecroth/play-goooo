@@ -67,7 +67,13 @@ def main():
     print("=" * 50)
     
     board_size = 9
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Default to MPS on Mac, then CUDA, then CPU
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     print(f"Device: {device}")
     
     # Create network

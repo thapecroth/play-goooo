@@ -10,7 +10,13 @@ def quick_benchmark():
     print("=" * 40)
     
     board_size = 9
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Default to MPS on Mac, then CUDA, then CPU
+    if torch.backends.mps.is_available():
+        device = torch.device('mps')
+    elif torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
     print(f"Device: {device}\n")
     
     # Create network
@@ -60,6 +66,8 @@ def quick_benchmark():
         opponent = (board_tensor == 2).float()
         if torch.cuda.is_available():
             torch.cuda.synchronize()
+        elif torch.backends.mps.is_available():
+            torch.mps.synchronize()
     torch_time = time.time() - start
     
     print(f"NumPy (10k iterations): {numpy_time:.4f}s")
@@ -82,6 +90,8 @@ def quick_benchmark():
                 policy, value = net(input_tensor)
                 if torch.cuda.is_available():
                     torch.cuda.synchronize()
+                elif torch.backends.mps.is_available():
+                    torch.mps.synchronize()
         
         elapsed = time.time() - start
         print(f"Batch size {batch_size}: {elapsed:.3f}s for 100 inferences")
