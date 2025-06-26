@@ -94,6 +94,7 @@ def play_against_classic_ai(args):
                 # Sort moves by heuristic for better pruning
                 move_scores = []
                 for mv in legal_moves:
+                    # mv is in (row, col) format from ClassicGoAI
                     quick_score = classic_ai.evaluate_move(game.board, mv[0], mv[1], game.current_player)
                     move_scores.append((quick_score, mv))
                 
@@ -107,10 +108,12 @@ def play_against_classic_ai(args):
                     if ai_depth > 2:
                         # Simple minimax-style lookahead
                         sim_game = OptimizedGoGame(board_size)
-                        sim_game.board = [row[:] for row in game.board]
+                        sim_game.board = game.board.copy()  # Use numpy copy for numpy array
                         sim_game.current_player = game.current_player
                         
-                        if sim_game.make_move(mv[0], mv[1], 'black' if game.current_player == BLACK else 'white'):
+                        # Convert (row, col) to (x, y) for OptimizedGoGame
+                        x, y = mv[1], mv[0]
+                        if sim_game.make_move(x, y, 'black' if game.current_player == BLACK else 'white'):
                             # Evaluate resulting position
                             future_score = classic_ai.evaluate_position(sim_game.board, sim_game.current_player)
                             score = score * 0.7 + future_score * 0.3 * (1 + ai_depth * 0.1)
@@ -119,7 +122,11 @@ def play_against_classic_ai(args):
                         best_score = score
                         best_move = mv
                 
-                move = best_move
+                # Convert best_move from (row, col) to (x, y) format
+                if best_move:
+                    move = (best_move[1], best_move[0])  # Convert to (x, y)
+                else:
+                    move = None
             else:
                 move = None
         

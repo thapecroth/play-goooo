@@ -261,6 +261,32 @@ class ClassicGoAI:
         
         return score
     
+    def get_group(self, board: np.ndarray, row: int, col: int) -> Set[Tuple[int, int]]:
+        """Get all stones in the same group"""
+        color = board[row, col]
+        if color == 0:
+            return set()
+            
+        visited = set()
+        queue = deque([(row, col)])
+        group = set()
+        
+        while queue:
+            r, c = queue.popleft()
+            if (r, c) in visited:
+                continue
+                
+            visited.add((r, c))
+            group.add((r, c))
+            
+            for dr, dc in self.neighbors:
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < self.board_size and 0 <= nc < self.board_size:
+                    if board[nr, nc] == color and (nr, nc) not in visited:
+                        queue.append((nr, nc))
+        
+        return group
+    
     def count_group_size(self, board: np.ndarray, row: int, col: int) -> int:
         """Count the size of a group"""
         color = board[row, col]
@@ -312,6 +338,69 @@ class ClassicGoAI:
             return top_moves[0][1]
         else:
             return move_scores[0][1]
+    
+    def evaluate_position(self, board: np.ndarray, player: int) -> float:
+        """Evaluate the current board position for a player"""
+        opponent = 3 - player
+        score = 0.0
+        
+        # Territory estimation
+        black_territory, white_territory = self.estimate_territory(board)
+        if player == 1:  # Black
+            score += (black_territory - white_territory) * self.pattern_weights['territory']
+        else:  # White
+            score += (white_territory - black_territory) * self.pattern_weights['territory']
+        
+        # Count stones on board
+        player_stones = np.sum(board == player)
+        opponent_stones = np.sum(board == opponent)
+        score += (player_stones - opponent_stones) * 2
+        
+        # Evaluate each stone's position value
+        position_score = 0
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if board[i, j] == player:
+                    # Corner stones are valuable
+                    if (i < 3 or i >= self.board_size - 3) and (j < 3 or j >= self.board_size - 3):
+                        position_score += 3
+                    # Edge stones are moderately valuable
+                    elif i < 3 or i >= self.board_size - 3 or j < 3 or j >= self.board_size - 3:
+                        position_score += 2
+                    else:
+                        position_score += 1
+                elif board[i, j] == opponent:
+                    if (i < 3 or i >= self.board_size - 3) and (j < 3 or j >= self.board_size - 3):
+                        position_score -= 3
+                    elif i < 3 or i >= self.board_size - 3 or j < 3 or j >= self.board_size - 3:
+                        position_score -= 2
+                    else:
+                        position_score -= 1
+        
+        score += position_score
+        
+        # Groups in atari (endangered groups)
+        groups_in_atari = 0
+        opponent_groups_in_atari = 0
+        checked = set()
+        
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if (i, j) not in checked and board[i, j] != 0:
+                    group = self.get_group(board, i, j)
+                    checked.update(group)
+                    liberties = self.count_liberties(board, i, j)
+                    
+                    if liberties == 1:
+                        if board[i, j] == player:
+                            groups_in_atari += len(group)
+                        else:
+                            opponent_groups_in_atari += len(group)
+        
+        score -= groups_in_atari * self.pattern_weights['atari_save']
+        score += opponent_groups_in_atari * self.pattern_weights['atari_attack']
+        
+        return score
     
     def estimate_territory(self, board: np.ndarray) -> Tuple[int, int]:
         """Estimate territory for both players"""
