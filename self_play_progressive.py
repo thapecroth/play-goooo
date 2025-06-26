@@ -13,7 +13,92 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 from queue import Queue
-from optimized_go import OptimizedGoGame, BLACK, WHITE
+
+# Try to import the fast compiled version first, fall back to OptimizedGoGame
+try:
+    # Import the Python version of FastGoGame for now
+    # Once compiled, we can use subprocess to call the binary
+    from go_game_codon_fast import FastGoGame, BLACK, WHITE, EMPTY
+    
+    # Wrapper to make FastGoGame compatible with OptimizedGoGame interface
+    class OptimizedGoGame:
+        def __init__(self, board_size: int = 9):
+            self.game = FastGoGame(board_size)
+            self.board_size = board_size
+            self.size = board_size  # Add size attribute for compatibility
+            # Create numpy view of the board
+            self._update_board_view()
+        
+        def _update_board_view(self):
+            """Update numpy board view from FastGoGame"""
+            self.board = np.array([[self.game.board[y][x] for x in range(self.board_size)] 
+                                  for y in range(self.board_size)], dtype=np.int8)
+        
+        @property
+        def current_player(self):
+            return self.game.current_player
+        
+        @property
+        def game_over(self):
+            return self.game.game_over
+        
+        @property
+        def winner(self):
+            if self.game.winner == BLACK:
+                return 'black'
+            elif self.game.winner == WHITE:
+                return 'white'
+            else:
+                return 'draw'
+        
+        def make_move(self, x: int, y: int, color: str) -> bool:
+            # Save current player
+            saved_player = self.game.current_player
+            # Set correct player
+            self.game.current_player = BLACK if color == 'black' else WHITE
+            success = self.game.make_move(x, y)
+            if not success:
+                self.game.current_player = saved_player
+            self._update_board_view()
+            return success
+        
+        def pass_turn(self, color: str):
+            self.game.pass_turn()
+            self._update_board_view()
+        
+        def _calculate_winner(self):
+            self.game._calculate_winner()
+        
+        def copy(self):
+            """Create a copy of the game state"""
+            new_game = OptimizedGoGame(self.board_size)
+            # Copy the internal game state
+            new_game.game.board = [row[:] for row in self.game.board]
+            new_game.game.current_player = self.game.current_player
+            new_game.game.game_over = self.game.game_over
+            new_game.game.winner = self.game.winner
+            new_game.game.pass_count = self.game.pass_count
+            new_game.game.captured_black = self.game.captured_black
+            new_game.game.captured_white = self.game.captured_white
+            new_game.game.ko_x = self.game.ko_x
+            new_game.game.ko_y = self.game.ko_y
+            new_game._update_board_view()
+            return new_game
+        
+        def get_valid_moves(self, color: str):
+            """Get valid moves for the current player"""
+            moves = self.game.get_valid_moves()
+            # Return moves as list of tuples, with None for pass
+            return moves if moves else []
+    
+    print("Using FastGoGame implementation for improved performance")
+    
+except ImportError:
+    # Fall back to original implementation
+    from optimized_go import OptimizedGoGame, BLACK, WHITE
+    EMPTY = 0
+    print("Using standard OptimizedGoGame implementation")
+
 from alpha_go import PolicyValueNet, AlphaGoPlayer
 from classic_go_ai import ClassicGoAI
 
