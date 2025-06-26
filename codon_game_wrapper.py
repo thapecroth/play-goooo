@@ -18,7 +18,7 @@ class CodonGoGame:
     def __init__(self, board_size: int = 9):
         self.board_size = board_size
         self.board = np.zeros((board_size, board_size), dtype=np.int8)
-        self.current_player = BLACK
+        self._current_player = BLACK
         self.game_over = False
         self.winner = None
         self.pass_count = 0
@@ -150,7 +150,7 @@ class CodonGoGame:
         
         # Update game state
         self.move_history.append((x, y, player_num))
-        self.current_player = 3 - self.current_player
+        self._current_player = 3 - self._current_player
         self.pass_count = 0
         
         return True
@@ -231,7 +231,7 @@ class CodonGoGame:
     def pass_turn(self, color: str) -> None:
         """Pass the turn"""
         self.pass_count += 1
-        self.current_player = 3 - self.current_player
+        self._current_player = 3 - self._current_player
         
         if self.pass_count >= 2:
             self.game_over = True
@@ -294,6 +294,29 @@ class CodonGoGame:
                         borders.add(self.board[ny, nx])
         
         return region, borders
+    
+    @property
+    def current_player(self) -> str:
+        """Get current player as string for compatibility"""
+        return 'black' if self._current_player == BLACK else 'white'
+    
+    @current_player.setter
+    def current_player(self, value):
+        """Set current player from string or int"""
+        if isinstance(value, str):
+            self._current_player = BLACK if value == 'black' else WHITE
+        else:
+            self._current_player = value
+    
+    @property
+    def captures(self) -> dict:
+        """Get captures as dict for compatibility"""
+        return {'black': self.captured_black, 'white': self.captured_white}
+    
+    @property
+    def size(self) -> int:
+        """Get board size for compatibility"""
+        return self.board_size
     
     def get_best_move_from_binary(self, color: int) -> Optional[Tuple[int, int]]:
         """Get best move using the compiled binary"""

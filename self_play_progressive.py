@@ -38,9 +38,17 @@ try:
         def current_player(self):
             return self.game.current_player
         
+        @current_player.setter
+        def current_player(self, value):
+            self.game.current_player = value
+        
         @property
         def game_over(self):
             return self.game.game_over
+        
+        @game_over.setter
+        def game_over(self, value):
+            self.game.game_over = value
         
         @property
         def winner(self):
@@ -50,6 +58,15 @@ try:
                 return 'white'
             else:
                 return 'draw'
+        
+        @winner.setter
+        def winner(self, value):
+            if value == 'black':
+                self.game.winner = BLACK
+            elif value == 'white':
+                self.game.winner = WHITE
+            else:
+                self.game.winner = 0
         
         def make_move(self, x: int, y: int, color: str) -> bool:
             # Save current player
