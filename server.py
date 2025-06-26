@@ -925,9 +925,19 @@ def get_available_models(model_type: str) -> List[Dict]:
     if model_type == 'dqn':
         file_pattern = "dqn_*.pth"
     elif model_type == 'alpha_go':
-        file_pattern = "alpha_go_*.pth"
+        # Match both alpha_go_*.pth and *progressive*.pth patterns
+        file_patterns = ["alpha_go_*.pth", "*progressive*.pth"]
+        all_files = []
+        for pattern in file_patterns:
+            all_files.extend(glob.glob(os.path.join(models_dir, pattern)))
+    else:
+        all_files = glob.glob(os.path.join(models_dir, file_pattern))
 
-    for file in glob.glob(os.path.join(models_dir, file_pattern)):
+    # If we didn't set all_files yet (for dqn), get the files
+    if model_type != 'alpha_go':
+        all_files = glob.glob(os.path.join(models_dir, file_pattern))
+    
+    for file in all_files:
         filename = os.path.basename(file)
         
         # Parse model info from filename
@@ -944,6 +954,16 @@ def get_available_models(model_type: str) -> List[Dict]:
                 'depth': depth,
                 'episodes': episodes
             })
+        elif 'progressive' in filename:
+            # Handle progressive model formats
+            # warmup_progressive_model.pth or progressive_model.pth
+            model_info = {
+                'name': filename,
+                'boardSize': 9,  # Default board size for AlphaGo models
+                'depth': 'policy-value',  # AlphaGo uses policy-value network
+                'episodes': 'warmup' if 'warmup' in filename else 'self-play'
+            }
+            models.append(model_info)
         else:
             # Fallback for other filename formats
             models.append({
