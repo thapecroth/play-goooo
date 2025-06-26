@@ -458,8 +458,28 @@ class GoAI:
             return False
         
         try:
-            self.alpha_go_net = PolicyValueNet(self.game.size)
-            self.alpha_go_net.load_state_dict(torch.load(full_path, map_location=self.device))
+            # Load the checkpoint
+            checkpoint = torch.load(full_path, map_location=self.device)
+            
+            # Handle different checkpoint formats
+            if isinstance(checkpoint, dict):
+                if 'model_state_dict' in checkpoint:
+                    # Progressive model format
+                    state_dict = checkpoint['model_state_dict']
+                    board_size = checkpoint.get('board_size', self.game.size)
+                    print(f"Loading progressive model with board size: {board_size}")
+                else:
+                    # Direct state dict format
+                    state_dict = checkpoint
+                    board_size = self.game.size
+            else:
+                # Direct state dict (old format)
+                state_dict = checkpoint
+                board_size = self.game.size
+            
+            # Initialize network and load state
+            self.alpha_go_net = PolicyValueNet(board_size)
+            self.alpha_go_net.load_state_dict(state_dict)
             self.alpha_go_net.eval()
             self.alpha_go_player = AlphaGoPlayer(self.alpha_go_net)
             print(f"Successfully loaded AlphaGo model: {model_path}")
