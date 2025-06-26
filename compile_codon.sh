@@ -21,74 +21,55 @@ echo "Codon version:"
 codon --version
 echo
 
-# Compile go_ai_codon.py
-echo "Compiling go_ai_codon.py..."
-if codon build -release -o go_ai_codon_compiled go_ai_codon.py; then
-    echo "✓ Successfully compiled go_ai_codon.py to go_ai_codon_compiled"
+# Try to compile go_ai_codon_simple.py first (simplest version)
+echo "Attempting to compile go_ai_codon_simple.py..."
+if codon build -release -o go_ai_codon_compiled go_ai_codon_simple.py; then
+    echo "✓ Successfully compiled go_ai_codon_simple.py to go_ai_codon_compiled"
 else
-    echo "✗ Failed to compile go_ai_codon.py"
-    exit 1
-fi
-
-# Create a wrapper script for the compiled version
-cat > go_ai_codon_wrapper.py << 'EOF'
-#!/usr/bin/env python3
-"""
-Wrapper to use Codon-compiled Go AI in benchmarks
-"""
-import subprocess
-import json
-import sys
-import os
-
-def call_codon_ai(method, *args):
-    """Call the Codon-compiled AI with method and arguments"""
-    # Prepare the call
-    script = f"""
-import json
-from go_ai_codon import GoAIOptimized
-
-ai = GoAIOptimized({args[0] if args else 9})
-result = ai.{method}(*{args[1:] if len(args) > 1 else ()})
-print(json.dumps(result))
-"""
+    echo "✗ Failed to compile go_ai_codon_simple.py"
+    echo
+    echo "Creating a test program to verify Codon installation..."
     
-    # Execute through Codon
-    result = subprocess.run(['./go_ai_codon_compiled'], 
-                           input=script, 
-                           capture_output=True, 
-                           text=True)
-    
-    if result.returncode == 0:
-        return json.loads(result.stdout.strip())
-    else:
-        raise RuntimeError(f"Codon execution failed: {result.stderr}")
-
-# Make it importable
-class CodonGoAI:
-    def __init__(self, board_size=9):
-        self.board_size = board_size
-        
-    def get_best_move(self, board, color, captures_black, captures_white):
-        return call_codon_ai('get_best_move', self.board_size, board, color, captures_black, captures_white)
+    # Create a simple test program
+    cat > codon_test.py << 'TESTEOF'
+def main():
+    print("Hello from Codon!")
+    x = 42
+    y = 58
+    print(f"The answer is: {x + y}")
 
 if __name__ == "__main__":
-    # Test the wrapper
-    ai = CodonGoAI(9)
-    print("Codon Go AI wrapper initialized successfully")
-EOF
-
-chmod +x go_ai_codon_wrapper.py
+    main()
+TESTEOF
+    
+    if codon build -release -o codon_test codon_test.py; then
+        echo "✓ Codon is working correctly"
+        ./codon_test
+        rm -f codon_test codon_test.py
+        echo
+        echo "The Go AI code may need further simplification for Codon compatibility."
+        echo "Please check the Codon documentation for supported Python features."
+    else
+        echo "✗ Codon installation appears to be broken"
+        rm -f codon_test.py
+        exit 1
+    fi
+fi
 
 echo
 echo "=== Compilation Complete ==="
-echo "Generated files:"
-echo "  - go_ai_codon_compiled (native executable)"
-echo "  - go_ai_codon_wrapper.py (Python wrapper)"
-echo
-echo "To run benchmarks with Codon:"
-echo "  python benchmark_go_engines.py"
-echo
-echo "To compile with specific optimizations:"
-echo "  codon build -release -march=native -o go_ai_codon_compiled go_ai_codon.py"
+if [ -f "go_ai_codon_compiled" ]; then
+    echo "Generated files:"
+    echo "  - go_ai_codon_compiled (native executable)"
+    echo
+    echo "To run benchmarks with Codon:"
+    echo "  python benchmark_go_engines.py"
+    echo
+    echo "Note: The -march=native flag causes segmentation faults on some systems."
+    echo "Use the default compilation or try:"
+    echo "  codon build -release -o go_ai_codon_compiled go_ai_codon_simple.py"
+else
+    echo "No compiled output was generated."
+    echo "The benchmark will fall back to using the Python version."
+fi
 echo

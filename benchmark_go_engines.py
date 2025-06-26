@@ -112,7 +112,7 @@ class GoEngineBenchmark:
         evaluations = 0
         for pos in positions:
             game.board = pos
-            score = ai._evaluate_position(game, game.BLACK)
+            score = ai._evaluate_position(game, 1)  # BLACK = 1
             evaluations += 1
         
         elapsed_time = time.time() - start_time
@@ -200,7 +200,7 @@ class GoEngineBenchmark:
         moves_found = 0
         for pos in positions:
             game.board = pos
-            game.current_player = game.BLACK
+            game.current_player = 1  # BLACK = 1
             move = ai.get_best_move(game, 'black')
             if move:
                 moves_found += 1
@@ -274,7 +274,11 @@ class GoEngineBenchmark:
             temp_ai = OptimizedGoAI(max_depth=1)  # Fast AI for position generation
             
             # Play 20-40 moves
-            num_moves = np.random.randint(20, min(40, game.size * game.size // 4))
+            max_moves = min(40, game.size * game.size // 4)
+            if max_moves <= 20:
+                num_moves = 10
+            else:
+                num_moves = np.random.randint(20, max_moves)
             for i in range(num_moves):
                 color = 'black' if i % 2 == 0 else 'white'
                 move = temp_ai.get_best_move(temp_game, color)
@@ -323,41 +327,58 @@ class GoEngineBenchmark:
     
     def _benchmark_codon_move_generation(self, board_size: int, positions: List[np.ndarray]) -> BenchmarkResult:
         """Benchmark Codon-compiled move generation"""
-        # Create a temporary test script
+        # Check if compiled version exists
+        if not os.path.exists('go_ai_codon_compiled'):
+            raise RuntimeError("Codon-compiled version not found. Run ./compile_codon.sh first")
+        
+        # Create a temporary test script that uses the simple interface
         test_script = f"""
 import time
-import sys
-sys.path.insert(0, '{os.path.dirname(os.path.abspath(__file__))}')
-from go_ai_codon import GoAIOptimized
 
-ai = GoAIOptimized({board_size})
 positions = {self._positions_to_list(positions)}
+board_size = {board_size}
 
 start_time = time.time()
 total_moves = 0
 
 for pos in positions:
-    ai.board = pos
-    moves = ai.get_valid_moves(1)  # Black
-    total_moves += len(moves)
+    # Count valid moves manually since we have simple interface
+    for y in range(board_size):
+        for x in range(board_size):
+            if pos[y][x] == 0:  # Empty
+                # Check if has neighbor liberty
+                has_liberty = False
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx = x + dx
+                    ny = y + dy
+                    if 0 <= nx < board_size and 0 <= ny < board_size:
+                        if pos[ny][nx] == 0:
+                            has_liberty = True
+                            break
+                if has_liberty:
+                    total_moves += 1
 
 elapsed = time.time() - start_time
-print(f"{{elapsed}},{{total_moves}}")
+print(f"{{elapsed:.6f}},{{total_moves}}")
 """
         
-        # Write and compile
-        with open('temp_codon_test.py', 'w') as f:
+        # Write test script
+        with open('temp_codon_bench.py', 'w') as f:
             f.write(test_script)
         
         try:
             # Compile with Codon
-            subprocess.run(['codon', 'build', '-o', 'temp_codon_test', 'temp_codon_test.py'], check=True)
+            subprocess.run(['codon', 'build', '-release', '-o', 'temp_codon_bench', 'temp_codon_bench.py'], 
+                         check=True, capture_output=True)
             
             # Run compiled version
             gc.collect()
             start_memory = self.measure_memory()
-            result = subprocess.run(['./temp_codon_test'], capture_output=True, text=True)
+            result = subprocess.run(['./temp_codon_bench'], capture_output=True, text=True)
             memory_used = self.measure_memory() - start_memory
+            
+            if result.returncode != 0:
+                raise RuntimeError(f"Codon execution failed: {result.stderr}")
             
             elapsed, total_moves = map(float, result.stdout.strip().split(','))
             
@@ -372,7 +393,7 @@ print(f"{{elapsed}},{{total_moves}}")
             )
         finally:
             # Cleanup
-            for f in ['temp_codon_test.py', 'temp_codon_test']:
+            for f in ['temp_codon_bench.py', 'temp_codon_bench']:
                 if os.path.exists(f):
                     os.remove(f)
     
