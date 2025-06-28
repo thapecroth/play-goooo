@@ -27,6 +27,9 @@ Thumbs.db
 # models/*.pth
 # models/*.pkl
 
+# Large model files (>100MB)
+models/dqn_go_board*.pth
+
 # Logs
 *.log
 
