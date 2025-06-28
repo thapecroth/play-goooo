@@ -23,12 +23,9 @@ build/
 .DS_Store
 Thumbs.db
 
-# Model files (optional - uncomment if models are large)
-# models/*.pth
-# models/*.pkl
-
-# Large model files (>100MB)
-models/dqn_go_board*.pth
+# Model files
+*.pth
+*.pkl
 
 # Logs
 *.log
