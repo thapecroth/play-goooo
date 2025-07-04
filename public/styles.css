@@ -28,6 +28,15 @@ h1 {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.game-mode-selector {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.game-mode-selector a {
+    text-decoration: none;
+}
+
 .game-info {
     margin-bottom: 20px;
 }

@@ -1,0 +1,273 @@
+/* Multiplayer-specific styles */
+
+.view {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Lobby Styles */
+.player-info {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.player-info input {
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    width: 250px;
+}
+
+.lobby-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 30px;
+}
+
+.create-game-section,
+.join-game-section {
+    background: #f8f8f8;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group select,
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#room-code {
+    width: 150px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: monospace;
+    font-size: 16px;
+}
+
+#join-room {
+    margin-left: 10px;
+}
+
+.public-rooms {
+    margin-top: 30px;
+}
+
+.rooms-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+}
+
+.room-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.room-item:hover {
+    background: #f0f0f0;
+}
+
+.room-item:last-child {
+    border-bottom: none;
+}
+
+.room-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.room-item-players {
+    font-size: 14px;
+    color: #666;
+}
+
+.room-item-board {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Game View Styles */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f8f8;
+    border-radius: 8px;
+}
+
+.room-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#room-id-display {
+    font-family: monospace;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: #007bff;
+}
+
+.btn-small {
+    padding: 5px 15px;
+    font-size: 14px;
+}
+
+.player-status {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.player-status.connected {
+    color: #28a745;
+}
+
+.player-status.disconnected {
+    color: #dc3545;
+}
+
+.player-status.waiting {
+    color: #ffc107;
+}
+
+/* Chat Styles */
+.chat-section {
+    margin-top: 30px;
+    background: #f8f8f8;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.chat-messages {
+    height: 200px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+.chat-message-header {
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+}
+
+.chat-message-text {
+    color: #666;
+    margin-left: 10px;
+}
+
+.chat-message-time {
+    font-size: 11px;
+    color: #999;
+    float: right;
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+}
+
+#chat-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .lobby-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .game-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .room-info {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Spectator Mode */
+.spectator-banner {
+    background: #ffc107;
+    color: #333;
+    padding: 10px;
+    text-align: center;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+/* Loading States */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #333;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error Messages */
+.error-message {
+    background: #dc3545;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    text-align: center;
+}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Game - Multiplayer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/multiplayer.css">
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Go Game - Multiplayer</h1>
+        
+        <!-- Lobby View -->
+        <div id="lobby-view" class="view">
+            <div class="player-info">
+                <label for="player-name">Your Name:</label>
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+            </div>
+            
+            <div class="lobby-options">
+                <div class="create-game-section">
+                    <h2>Create New Game</h2>
+                    <div class="form-group">
+                        <label for="new-board-size">Board Size:</label>
+                        <select id="new-board-size">
+                            <option value="9" selected>9x9</option>
+                            <option value="13">13x13</option>
+                            <option value="19">19x19</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="vs-ai"> Play against AI
+                        </label>
+                    </div>
+                    <button id="create-room" class="btn btn-primary">Create Game</button>
+                </div>
+                
+                <div class="join-game-section">
+                    <h2>Join Game</h2>
+                    <div class="form-group">
+                        <label for="room-code">Room Code:</label>
+                        <input type="text" id="room-code" placeholder="Enter 6-digit code" maxlength="6">
+                        <button id="join-room" class="btn btn-secondary">Join</button>
+                    </div>
+                    
+                    <div class="public-rooms">
+                        <h3>Public Games</h3>
+                        <div id="rooms-list" class="rooms-list">
+                            <div class="loading">Loading available games...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game View -->
+        <div id="game-view" class="view" style="display: none;">
+            <div class="game-header">
+                <div class="room-info">
+                    <span>Room: <strong id="room-id-display"></strong></span>
+                    <button id="copy-room-code" class="btn btn-small">Copy Code</button>
+                </div>
+                <button id="leave-game" class="btn btn-danger btn-small">Leave Game</button>
+            </div>
+            
+            <div class="game-info">
+                <div class="scores">
+                    <div class="score black-score">
+                        <span class="player-name" id="black-player-name">Black</span>
+                        <span class="captures">Captures: <span id="black-captures">0</span></span>
+                        <span class="player-status" id="black-status"></span>
+                    </div>
+                    <div class="current-player">
+                        Current Turn: <span id="current-player">Black</span>
+                    </div>
+                    <div class="score white-score">
+                        <span class="player-name" id="white-player-name">White</span>
+                        <span class="captures">Captures: <span id="white-captures">0</span></span>
+                        <span class="player-status" id="white-status"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="board-container">
+                <div id="board" class="board"></div>
+            </div>
+            
+            <div class="controls">
+                <button id="pass" class="btn btn-secondary">Pass</button>
+                <button id="resign" class="btn btn-danger">Resign</button>
+            </div>
+            
+            <div class="game-status">
+                <div id="status-message"></div>
+            </div>
+            
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <h3>Chat</h3>
+                <div id="chat-messages" class="chat-messages"></div>
+                <div class="chat-input">
+                    <input type="text" id="chat-input" placeholder="Type a message..." maxlength="200">
+                    <button id="send-chat" class="btn btn-small">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/multiplayer.js"></script>
+</body>
+</html>

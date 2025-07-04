@@ -8,7 +8,9 @@
     "dev": "nodemon server.js",
     "start:python": "python server.py",
     "start:py": "python server.py",
-    "server:python": "pyenv activate play-gooo && python server.py"
+    "server:python": "pyenv activate play-gooo && python server.py",
+    "start:multiplayer": "node server-multiplayer.js",
+    "dev:multiplayer": "nodemon server-multiplayer.js"
   },
   "dependencies": {
     "express": "^4.18.2",
