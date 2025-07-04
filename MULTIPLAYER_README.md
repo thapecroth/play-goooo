@@ -36,6 +36,18 @@ The multiplayer server will run on http://localhost:3000
 - **Multiple Board Sizes**: Support for 9x9, 13x13, and 19x19 boards
 - **AI Opponent Option**: Can create rooms with AI opponents
 
+## Cloudflare Deployment Status
+
+### Frontend (Cloudflare Pages)
+🎮 **Live at**: https://go-game-multiplayer.pages.dev/
+- ✅ Single-player vs AI (fully functional)
+- ⚠️ Multiplayer (requires WebSocket backend - see below)
+
+### Backend (Cloudflare Workers)
+🔌 **API Status**: https://go-game-backend-free.thapecroth.workers.dev/api/status
+- ❌ WebSocket support not available on free tier
+- ℹ️ Returns information about backend limitations
+
 ## Cloudflare Pages Deployment (Static Frontend)
 
 The frontend is already deployed at https://go-game-multiplayer.pages.dev/
