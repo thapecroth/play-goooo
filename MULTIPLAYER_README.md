@@ -2,6 +2,14 @@
 
 This guide explains how to set up and deploy the multiplayer version of the Go game.
 
+## Live Demo
+
+🎮 **Play Now**: https://go-game-multiplayer.pages.dev/
+
+The game is deployed on Cloudflare Pages as a static site. Currently, it supports:
+- ✅ Single-player vs AI (fully functional)
+- ⚠️ Multiplayer (requires backend server - see below)
+
 ## Local Development
 
 ### 1. Start the Multiplayer Server
@@ -28,7 +36,29 @@ The multiplayer server will run on http://localhost:3000
 - **Multiple Board Sizes**: Support for 9x9, 13x13, and 19x19 boards
 - **AI Opponent Option**: Can create rooms with AI opponents
 
-## Cloudflare Deployment
+## Cloudflare Pages Deployment (Static Frontend)
+
+The frontend is already deployed at https://go-game-multiplayer.pages.dev/
+
+To deploy your own version:
+
+```bash
+# Install Wrangler CLI
+npm install -g wrangler
+
+# Login to Cloudflare
+wrangler login
+
+# Create a new Pages project
+wrangler pages project create your-project-name
+
+# Deploy the static files
+wrangler pages deploy public --project-name=your-project-name
+```
+
+Your game will be available at `https://your-project-name.pages.dev/`
+
+## Cloudflare Workers Deployment (Backend Proxy)
 
 ### Prerequisites
 

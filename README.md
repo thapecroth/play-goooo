@@ -1,13 +1,19 @@
 # Go Game
 
-This is a web-based Go game with AI opponents.
+This is a web-based Go game with AI opponents and online multiplayer support.
+
+🎮 **Play Now**: https://go-game-multiplayer.pages.dev/
+
+> Note: The deployed version currently supports single-player vs AI only. For multiplayer functionality, you'll need to run your own backend server (see [Multiplayer Setup](./MULTIPLAYER_README.md)).
 
 ## Development Commands
 
 ### Node.js Backend (Default)
 ```bash
-npm start              # Production server
-npm run dev            # Development with nodemon
+npm start              # Production server (single-player)
+npm run dev            # Development with nodemon (single-player)
+npm run start:multiplayer   # Production server (multiplayer)
+npm run dev:multiplayer     # Development with nodemon (multiplayer)
 ```
 
 ### Python Backend (AI Training)
