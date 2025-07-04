@@ -6,12 +6,19 @@
     <title>Go Game - Multiplayer</title>
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/multiplayer.css">
+    <link rel="stylesheet" href="/static/multiplayer-enhanced.css">
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <script src="/config.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Go Game - Multiplayer</h1>
+        <div class="header-controls">
+            <h1>Go Game - Multiplayer</h1>
+            <div class="header-buttons">
+                <span id="connection-status" class="connection-status"></span>
+                <button id="sound-toggle" class="btn btn-small" title="Toggle sound effects">🔊 Sound</button>
+            </div>
+        </div>
         
         <!-- Lobby View -->
         <div id="lobby-view" class="view">
@@ -112,6 +119,7 @@
     </div>
     
     <!-- Use HTTP-based multiplayer for Cloudflare deployment -->
+    <script src="/static/sounds.js"></script>
     <script src="/static/multiplayer-http.js"></script>
 </body>
 </html>

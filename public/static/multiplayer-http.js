@@ -36,6 +36,8 @@ const statusMessage = document.getElementById('status-message');
 const chatInput = document.getElementById('chat-input');
 const sendChatBtn = document.getElementById('send-chat');
 const chatMessages = document.getElementById('chat-messages');
+const soundToggleBtn = document.getElementById('sound-toggle');
+const connectionStatus = document.getElementById('connection-status');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,6 +59,26 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendChat();
     });
+    soundToggleBtn.addEventListener('click', toggleSound);
+    
+    // Update sound button state
+    updateSoundButton();
+}
+
+function toggleSound() {
+    const enabled = window.gameSounds.toggle();
+    updateSoundButton();
+    window.gameSounds.play('click');
+}
+
+function updateSoundButton() {
+    if (window.gameSounds.enabled) {
+        soundToggleBtn.textContent = '🔊 Sound';
+        soundToggleBtn.classList.remove('muted');
+    } else {
+        soundToggleBtn.textContent = '🔇 Sound';
+        soundToggleBtn.classList.add('muted');
+    }
 }
 
 function loadPlayerName() {
@@ -83,18 +105,59 @@ async function checkBackendStatus() {
         if (data.status === 'online') {
             console.log('Backend status:', data);
             showStatus('Connected to game server', 'success');
+            updateConnectionStatus(true);
+            
+            // Show rate limit info
+            if (data.rateLimit) {
+                console.log('Rate limits:', data.rateLimit);
+            }
         }
     } catch (error) {
         console.error('Failed to connect to backend:', error);
         showStatus('Failed to connect to game server', 'error');
+        updateConnectionStatus(false);
+        
+        // Show offline mode message
+        showOfflineMessage();
     }
+}
+
+function updateConnectionStatus(online) {
+    if (online) {
+        connectionStatus.textContent = 'Online';
+        connectionStatus.className = 'connection-status online';
+    } else {
+        connectionStatus.textContent = 'Offline';
+        connectionStatus.className = 'connection-status offline';
+    }
+}
+
+function showOfflineMessage() {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'offline-message';
+    messageDiv.innerHTML = `
+        <h3>Connection Error</h3>
+        <p>Unable to connect to the game server. Please check your internet connection or try again later.</p>
+        <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+    `;
+    document.querySelector('.container').appendChild(messageDiv);
 }
 
 // Room Management
 async function createRoom() {
     const playerName = getPlayerName();
+    if (!playerName || playerName === 'Anonymous') {
+        showStatus('Please enter your name', 'warning');
+        playerNameInput.focus();
+        return;
+    }
+    
     const boardSize = parseInt(newBoardSizeSelect.value);
     const vsAI = vsAiCheckbox.checked;
+    
+    // Disable button during creation
+    createRoomBtn.disabled = true;
+    createRoomBtn.textContent = 'Creating...';
     
     try {
         showStatus('Creating room...', 'info');
@@ -109,12 +172,16 @@ async function createRoom() {
         
         if (response.ok) {
             handleRoomJoined(data);
+            showStatus('Room created successfully!', 'success');
         } else {
             showStatus(data.error || 'Failed to create room', 'error');
         }
     } catch (error) {
         console.error('Error creating room:', error);
-        showStatus('Failed to create room', 'error');
+        showStatus('Failed to create room. Please check your connection.', 'error');
+    } finally {
+        createRoomBtn.disabled = false;
+        createRoomBtn.textContent = 'Create Game';
     }
 }
 
@@ -295,8 +362,17 @@ async function makeMove(x, y) {
         
         if (response.ok) {
             updateGameState(data.gameState);
+            window.gameSounds.play('place');
+            
+            // Check for captures
+            if (data.gameState.captures && 
+                (data.gameState.captures.black > gameState.captures.black || 
+                 data.gameState.captures.white > gameState.captures.white)) {
+                window.gameSounds.play('capture');
+            }
         } else {
             showStatus(data.error || 'Invalid move', 'error');
+            window.gameSounds.play('click');
         }
     } catch (error) {
         console.error('Error making move:', error);
