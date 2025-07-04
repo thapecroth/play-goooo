@@ -10,7 +10,11 @@
     "start:py": "python server.py",
     "server:python": "pyenv activate play-gooo && python server.py",
     "start:multiplayer": "node server-multiplayer.js",
-    "dev:multiplayer": "nodemon server-multiplayer.js"
+    "dev:multiplayer": "nodemon server-multiplayer.js",
+    "deploy:backend": "wrangler deploy --env production",
+    "deploy:frontend": "CLOUDFLARE_ACCOUNT_ID=6459dabf6604b2d6e887f95737cc0840 wrangler pages deploy public --project-name go-game-multiplayer",
+    "deploy:all": "npm run deploy:backend && npm run deploy:frontend",
+    "dev:worker": "wrangler dev --env development"
   },
   "dependencies": {
     "express": "^4.18.2",

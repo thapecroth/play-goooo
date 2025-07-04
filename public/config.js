@@ -1,7 +1,7 @@
 // Configuration for different environments
 const config = {
-  // Backend API URL (for status checking)
-  backendApiUrl: 'https://go-game-backend-free-production.thapecroth.workers.dev',
+  // Backend API URL (for status checking and HTTP-based multiplayer)
+  backendApiUrl: 'https://go-game-backend.thapecroth.workers.dev',
   
   // Check if running locally or in production
   getSocketUrl: function() {

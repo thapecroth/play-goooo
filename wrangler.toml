@@ -1,29 +1,55 @@
-name = "go-game-multiplayer"
-main = "workers/websocket-proxy.js"
+# Consolidated Wrangler configuration for Go Game
+# Handles both frontend (Pages) and backend (Workers) deployments
+
+name = "go-game"
+account_id = "6459dabf6604b2d6e887f95737cc0840"
 compatibility_date = "2024-01-01"
 
+# Backend Worker with Durable Objects (SQLite)
+main = "workers/backend-durable-sqlite.js"
+
 [env.production]
+name = "go-game-backend"
 workers_dev = false
-routes = [
-  { pattern = "go-game.example.com/*", zone_name = "example.com" }
+
+[env.production.durable_objects]
+bindings = [
+  { name = "GAME_COORDINATOR", class_name = "GameCoordinator" }
 ]
 
 [env.development]
+name = "go-game-backend-dev"
 workers_dev = true
 
-# Enable WebSocket support
 [durable_objects]
 bindings = [
-  { name = "GAME_SESSIONS", class_name = "GameSession" }
+  { name = "GAME_COORDINATOR", class_name = "GameCoordinator" }
 ]
 
+# SQLite migrations for free tier
 [[migrations]]
 tag = "v1"
-new_classes = ["GameSession"]
+new_sqlite_classes = ["GameCoordinator"]
 
-# Environment variables
-[vars]
-BACKEND_URL = "http://localhost:3000"
+# Build configuration
+[build]
+command = ""
+
+# Pages configuration for frontend
+[site]
+bucket = "./public"
+
+# Environment-specific configurations
+# Routes are configured separately in dashboard or via wrangler publish
 
 [env.production.vars]
-BACKEND_URL = "https://your-backend-server.com"
+FRONTEND_URL = "https://go-game-multiplayer.pages.dev"
+
+[env.development.vars]
+FRONTEND_URL = "http://localhost:3000"
+
+# Deployment aliases
+[alias]
+backend = "wrangler deploy --env production"
+frontend = "wrangler pages deploy public --project-name go-game-multiplayer"
+all = "npm run deploy:all"
