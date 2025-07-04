@@ -6,6 +6,12 @@ This is a web-based Go game with AI opponents and online multiplayer support.
 
 > Note: The deployed version currently supports single-player vs AI only. For multiplayer functionality, you'll need to run your own backend server (see [Multiplayer Setup](./MULTIPLAYER_README.md)).
 
+## Deployment Status
+
+- **Frontend**: Deployed to Cloudflare Pages at https://go-game-multiplayer.pages.dev/
+- **Backend API**: Deployed to Cloudflare Workers (free tier) at https://go-game-backend-free-production.thapecroth.workers.dev/
+- **Limitations**: Cloudflare's free tier doesn't support WebSockets, so real-time multiplayer requires local hosting or alternative deployment
+
 ## Development Commands
 
 ### Node.js Backend (Default)
