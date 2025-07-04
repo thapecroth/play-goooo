@@ -101,6 +101,17 @@ function getRoomState(roomId) {
     const room = rooms.get(roomId);
     if (!room) return null;
     
+    const gameState = room.game.getState();
+    
+    // Convert 2D board array to 1D array for multiplayer client compatibility
+    const flatBoard = [];
+    for (let y = 0; y < gameState.board.length; y++) {
+        for (let x = 0; x < gameState.board[y].length; x++) {
+            const stone = gameState.board[y][x];
+            flatBoard.push(stone === 'black' ? 1 : stone === 'white' ? 2 : 0);
+        }
+    }
+    
     return {
         id: room.id,
         players: {
@@ -108,7 +119,11 @@ function getRoomState(roomId) {
             white: room.players.white ? { name: room.players.white.name, connected: true } : null
         },
         spectators: room.spectators.size,
-        gameState: room.game.getState(),
+        gameState: {
+            ...gameState,
+            board: flatBoard,
+            boardSize: room.game.size
+        },
         settings: room.settings
     };
 }
@@ -234,8 +249,21 @@ io.on('connection', (socket) => {
         if (game.makeMove(x, y, playerColor)) {
             const gameState = game.getState();
             
+            // Convert board to flat array for client compatibility
+            const flatBoard = [];
+            for (let y = 0; y < gameState.board.length; y++) {
+                for (let x = 0; x < gameState.board[y].length; x++) {
+                    const stone = gameState.board[y][x];
+                    flatBoard.push(stone === 'black' ? 1 : stone === 'white' ? 2 : 0);
+                }
+            }
+            
             // Broadcast updated game state to all in room
-            io.to(roomId).emit('gameState', gameState);
+            io.to(roomId).emit('gameState', {
+                ...gameState,
+                board: flatBoard,
+                boardSize: game.size
+            });
             
             // If playing against AI and game not over, make AI move
             if (settings.aiEnabled && !game.gameOver && game.currentPlayer === settings.aiColor) {
@@ -246,7 +274,19 @@ io.on('connection', (socket) => {
                     } else {
                         game.pass(settings.aiColor);
                     }
-                    io.to(roomId).emit('gameState', game.getState());
+                    const aiGameState = game.getState();
+                    const aiFlatBoard = [];
+                    for (let y = 0; y < aiGameState.board.length; y++) {
+                        for (let x = 0; x < aiGameState.board[y].length; x++) {
+                            const stone = aiGameState.board[y][x];
+                            aiFlatBoard.push(stone === 'black' ? 1 : stone === 'white' ? 2 : 0);
+                        }
+                    }
+                    io.to(roomId).emit('gameState', {
+                        ...aiGameState,
+                        board: aiFlatBoard,
+                        boardSize: game.size
+                    });
                 }, 800);
             }
         } else {
@@ -275,7 +315,19 @@ io.on('connection', (socket) => {
         if (!playerColor || game.currentPlayer !== playerColor) return;
         
         game.pass(playerColor);
-        io.to(roomId).emit('gameState', game.getState());
+        const gameState = game.getState();
+        const flatBoard = [];
+        for (let y = 0; y < gameState.board.length; y++) {
+            for (let x = 0; x < gameState.board[y].length; x++) {
+                const stone = gameState.board[y][x];
+                flatBoard.push(stone === 'black' ? 1 : stone === 'white' ? 2 : 0);
+            }
+        }
+        io.to(roomId).emit('gameState', {
+            ...gameState,
+            board: flatBoard,
+            boardSize: game.size
+        });
         
         // If playing against AI and game not over, make AI move
         if (settings.aiEnabled && !game.gameOver && game.currentPlayer === settings.aiColor) {
@@ -286,7 +338,19 @@ io.on('connection', (socket) => {
                 } else {
                     game.pass(settings.aiColor);
                 }
-                io.to(roomId).emit('gameState', game.getState());
+                const aiGameState2 = game.getState();
+                const aiFlatBoard2 = [];
+                for (let y = 0; y < aiGameState2.board.length; y++) {
+                    for (let x = 0; x < aiGameState2.board[y].length; x++) {
+                        const stone = aiGameState2.board[y][x];
+                        aiFlatBoard2.push(stone === 'black' ? 1 : stone === 'white' ? 2 : 0);
+                    }
+                }
+                io.to(roomId).emit('gameState', {
+                    ...aiGameState2,
+                    board: aiFlatBoard2,
+                    boardSize: game.size
+                });
             }, 800);
         }
     });
@@ -312,7 +376,19 @@ io.on('connection', (socket) => {
         if (!playerColor) return;
         
         game.resign(playerColor);
-        io.to(roomId).emit('gameState', game.getState());
+        const gameState = game.getState();
+        const flatBoard = [];
+        for (let y = 0; y < gameState.board.length; y++) {
+            for (let x = 0; x < gameState.board[y].length; x++) {
+                const stone = gameState.board[y][x];
+                flatBoard.push(stone === 'black' ? 1 : stone === 'white' ? 2 : 0);
+            }
+        }
+        io.to(roomId).emit('gameState', {
+            ...gameState,
+            board: flatBoard,
+            boardSize: game.size
+        });
     });
     
     // Handle disconnection
