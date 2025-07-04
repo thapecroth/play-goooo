@@ -32,22 +32,37 @@ const chatMessages = document.getElementById('chat-messages');
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     // Check if multiplayer is available
-    if (!window.gameConfig.hasBackendConfigured()) {
-        showError('Multiplayer requires a backend server. Please run locally or configure a backend URL in config.js');
-        // Disable create/join buttons
-        createRoomBtn.disabled = true;
-        joinRoomBtn.disabled = true;
-        createRoomBtn.textContent = 'Backend Required';
-        joinRoomBtn.textContent = 'Backend Required';
+    if (!window.gameConfig || !window.gameConfig.hasBackendConfigured()) {
+        showBackendNotice();
         return;
     }
     
     setupEventListeners();
     loadPlayerName();
-    requestRoomsList();
     
-    // Refresh rooms list every 5 seconds
-    setInterval(requestRoomsList, 5000);
+    // Add connection status handling
+    let connectionTimeout;
+    
+    socket.on('connect', () => {
+        console.log('Connected to game server');
+        clearTimeout(connectionTimeout);
+        hideConnectionError();
+        requestRoomsList();
+        // Refresh rooms list every 5 seconds
+        setInterval(requestRoomsList, 5000);
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        showConnectionError();
+    });
+    
+    // Set a timeout to show error if connection fails
+    connectionTimeout = setTimeout(() => {
+        if (!socket.connected) {
+            showConnectionError();
+        }
+    }, 3000);
 });
 
 function setupEventListeners() {
@@ -477,6 +492,66 @@ function calculateFinalScores() {
     }
     
     return { black: blackScore, white: whiteScore };
+}
+
+// Helper functions for connection status
+function showBackendNotice() {
+    const lobbyView = document.getElementById('lobby-view');
+    lobbyView.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <h2>Multiplayer Mode</h2>
+            <div style="background: #f8f8f8; padding: 30px; border-radius: 10px; margin: 20px auto; max-width: 600px;">
+                <p style="font-size: 18px; color: #666; margin-bottom: 20px;">
+                    Multiplayer requires a game server to be running.
+                </p>
+                <p style="color: #999; margin-bottom: 20px;">
+                    This is a static deployment on Cloudflare Pages. To play multiplayer:
+                </p>
+                <ol style="text-align: left; display: inline-block; color: #666;">
+                    <li>Clone the repository locally</li>
+                    <li>Run <code>npm install</code></li>
+                    <li>Run <code>npm run start:multiplayer</code></li>
+                    <li>Open <code>http://localhost:3000/multiplayer.html</code></li>
+                </ol>
+                <p style="margin-top: 30px;">
+                    <a href="/" class="btn btn-primary">Play vs AI Instead</a>
+                </p>
+                <p style="margin-top: 15px; font-size: 14px; color: #999;">
+                    Or deploy your own backend server to enable online multiplayer.
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+function showConnectionError() {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'connection-error';
+    errorDiv.className = 'error-message';
+    errorDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;';
+    errorDiv.innerHTML = `
+        <strong>Connection Error</strong><br>
+        Cannot connect to game server. Make sure the server is running.
+    `;
+    
+    if (!document.getElementById('connection-error')) {
+        document.body.appendChild(errorDiv);
+    }
+    
+    // Disable buttons
+    createRoomBtn.disabled = true;
+    joinRoomBtn.disabled = true;
+}
+
+function hideConnectionError() {
+    const errorDiv = document.getElementById('connection-error');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+    
+    // Enable buttons
+    createRoomBtn.disabled = false;
+    joinRoomBtn.disabled = false;
 }
 
 // Export joinPublicRoom for onclick handler
