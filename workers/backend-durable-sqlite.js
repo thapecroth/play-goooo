@@ -107,6 +107,14 @@ export class GameCoordinator {
         poll_count INTEGER DEFAULT 0,
         last_reset INTEGER NOT NULL
       );
+      
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id TEXT NOT NULL,
+        player_name TEXT NOT NULL,
+        message TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      );
     `);
   }
   
@@ -340,6 +348,13 @@ export class GameCoordinator {
       });
     }
     
+    // Get recent chat messages
+    const chatMessages = await this.sql.exec(
+      `SELECT player_name, message, timestamp FROM chat_messages 
+       WHERE room_id = ? ORDER BY timestamp DESC LIMIT 50`,
+      roomId
+    ).then(r => r.toArray().reverse()); // Reverse to get chronological order
+    
     return new Response(JSON.stringify({
       roomState: this.formatRoomState({
         ...room,
@@ -347,6 +362,7 @@ export class GameCoordinator {
         players: JSON.parse(room.players),
         settings: JSON.parse(room.settings)
       }),
+      chatMessages: chatMessages,
       pollInterval: RATE_LIMIT.POLL_INTERVAL_MS
     }), {
       headers: { 
@@ -566,11 +582,58 @@ export class GameCoordinator {
   }
   
   async handleChat(request) {
-    // Implement chat functionality if needed
+    const url = new URL(request.url);
+    const roomId = url.pathname.split('/')[3];
+    const body = await request.json();
+    const { message } = body;
+    
+    if (!message || message.trim() === '') {
+      return new Response(JSON.stringify({
+        error: 'Message cannot be empty'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return new Response(JSON.stringify({
+        error: 'Room not found'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const players = JSON.parse(room.players);
+    const clientId = request.headers.get('CF-Connecting-IP');
+    
+    // Determine sender name
+    let senderName = 'Spectator';
+    if (players.black && players.black.id === clientId) {
+      senderName = players.black.name;
+    } else if (players.white && players.white.id === clientId) {
+      senderName = players.white.name;
+    }
+    
+    // Add message to room's chat history
+    const chatMessage = {
+      playerName: senderName,
+      message: message.substring(0, 200), // Limit message length
+      timestamp: Date.now()
+    };
+    
+    // Store chat message in a new chat_messages table
+    await this.sql.exec(
+      `INSERT INTO chat_messages (room_id, player_name, message, timestamp) VALUES (?, ?, ?, ?)`,
+      roomId, senderName, message.substring(0, 200), Date.now()
+    );
+    
     return new Response(JSON.stringify({
-      error: 'Chat not implemented yet'
+      success: true,
+      chatMessage
     }), {
-      status: 501,
       headers: { 'Content-Type': 'application/json' }
     });
   }

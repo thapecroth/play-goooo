@@ -33,6 +33,9 @@ const leaveGameBtn = document.getElementById('leave-game');
 const passBtn = document.getElementById('pass');
 const resignBtn = document.getElementById('resign');
 const statusMessage = document.getElementById('status-message');
+const chatInput = document.getElementById('chat-input');
+const sendChatBtn = document.getElementById('send-chat');
+const chatMessages = document.getElementById('chat-messages');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,6 +53,10 @@ function setupEventListeners() {
     passBtn.addEventListener('click', pass);
     resignBtn.addEventListener('click', resign);
     playerNameInput.addEventListener('change', savePlayerName);
+    sendChatBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChat();
+    });
 }
 
 function loadPlayerName() {
@@ -224,6 +231,11 @@ function startPolling() {
             if (response.ok) {
                 pollFailures = 0;
                 updateRoomState(data.roomState);
+                
+                // Update chat messages if provided
+                if (data.chatMessages) {
+                    updateChatMessages(data.chatMessages);
+                }
                 
                 // Update poll interval if provided
                 if (data.pollInterval && data.pollInterval !== POLL_INTERVAL) {
@@ -434,7 +446,7 @@ function updateGameStatus() {
 function initializeBoard(size) {
     boardSize = size;
     boardElement = document.getElementById('board');
-    boardElement.className = `board board-${size}`;
+    boardElement.className = `board size-${size}`;
     boardElement.innerHTML = '';
     
     // Create intersection elements
@@ -461,25 +473,91 @@ function renderBoard() {
     
     const intersections = boardElement.querySelectorAll('.intersection');
     
-    intersections.forEach(intersection => {
+    intersections.forEach((intersection, i) => {
         const x = parseInt(intersection.dataset.x);
         const y = parseInt(intersection.dataset.y);
         const index = y * boardSize + x;
         
-        intersection.className = 'intersection';
+        // Reset classes but keep position classes
+        intersection.className = getIntersectionClasses(x, y, boardSize);
         
+        // Add stone if present
         if (gameState.board[index] === 1) {
-            intersection.classList.add('black');
+            const stone = document.createElement('div');
+            stone.className = 'stone black';
+            intersection.innerHTML = '';
+            intersection.appendChild(stone);
         } else if (gameState.board[index] === 2) {
-            intersection.classList.add('white');
+            const stone = document.createElement('div');
+            stone.className = 'stone white';
+            intersection.innerHTML = '';
+            intersection.appendChild(stone);
+        } else {
+            intersection.innerHTML = '';
+        }
+        
+        // Add star point if needed
+        if (isStarPoint(x, y, boardSize)) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            intersection.appendChild(star);
         }
         
         // Highlight last move
         if (gameState.lastMove && !gameState.lastMove.pass &&
             gameState.lastMove.x === x && gameState.lastMove.y === y) {
-            intersection.classList.add('last-move');
+            const stone = intersection.querySelector('.stone');
+            if (stone) {
+                stone.classList.add('last-move');
+            }
         }
     });
+}
+
+function getIntersectionClasses(x, y, size) {
+    let classes = ['intersection'];
+    
+    if (y === 0) classes.push('edge-top');
+    if (y === size - 1) classes.push('edge-bottom');
+    if (x === 0) classes.push('edge-left');
+    if (x === size - 1) classes.push('edge-right');
+    
+    if (isStarPoint(x, y, size)) {
+        classes.push('star-point');
+    }
+    
+    return classes.join(' ');
+}
+
+function isStarPoint(x, y, size) {
+    const starPoints = getStarPoints(size);
+    return starPoints.some(point => point.x === x && point.y === y);
+}
+
+function getStarPoints(size) {
+    const points = [];
+    
+    if (size === 9) {
+        points.push(
+            { x: 2, y: 2 }, { x: 6, y: 2 },
+            { x: 4, y: 4 },
+            { x: 2, y: 6 }, { x: 6, y: 6 }
+        );
+    } else if (size === 13) {
+        points.push(
+            { x: 3, y: 3 }, { x: 9, y: 3 },
+            { x: 6, y: 6 },
+            { x: 3, y: 9 }, { x: 9, y: 9 }
+        );
+    } else if (size === 19) {
+        points.push(
+            { x: 3, y: 3 }, { x: 9, y: 3 }, { x: 15, y: 3 },
+            { x: 3, y: 9 }, { x: 9, y: 9 }, { x: 15, y: 9 },
+            { x: 3, y: 15 }, { x: 9, y: 15 }, { x: 15, y: 15 }
+        );
+    }
+    
+    return points;
 }
 
 function handleIntersectionClick(e) {
@@ -543,6 +621,67 @@ function showSpectatorBanner() {
     
     const gameInfo = document.querySelector('.game-info');
     gameInfo.insertBefore(banner, gameInfo.firstChild);
+}
+
+// Chat functions
+async function sendChat() {
+    const message = chatInput.value.trim();
+    if (!message || !currentRoom) return;
+    
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/room/${currentRoom}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            chatInput.value = '';
+            // Add message immediately to chat
+            if (data.chatMessage) {
+                addChatMessage(data.chatMessage);
+            }
+        } else {
+            showStatus(data.error || 'Failed to send message', 'error');
+        }
+    } catch (error) {
+        console.error('Error sending chat:', error);
+        showStatus('Failed to send message', 'error');
+    }
+}
+
+function updateChatMessages(messages) {
+    if (!messages || messages.length === 0) return;
+    
+    // Clear existing messages
+    chatMessages.innerHTML = '';
+    
+    // Add all messages
+    messages.forEach(msg => {
+        addChatMessage({
+            playerName: msg.player_name,
+            message: msg.message,
+            timestamp: msg.timestamp
+        });
+    });
+}
+
+function addChatMessage(messageData) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'chat-message';
+    
+    const time = new Date(messageData.timestamp).toLocaleTimeString();
+    
+    messageElement.innerHTML = `
+        <span class="chat-message-time">${time}</span>
+        <span class="chat-message-header">${messageData.playerName}:</span>
+        <span class="chat-message-text">${messageData.message}</span>
+    `;
+    
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 // Export joinPublicRoom for onclick handler
