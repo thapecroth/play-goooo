@@ -495,17 +495,36 @@ function calculateFinalScores() {
 }
 
 // Helper functions for connection status
-function showBackendNotice() {
+async function showBackendNotice() {
     const lobbyView = document.getElementById('lobby-view');
+    
+    // Check backend status
+    let backendInfo = '';
+    if (window.gameConfig && window.gameConfig.getBackendStatus) {
+        const status = await window.gameConfig.getBackendStatus();
+        if (status.status === 'online') {
+            backendInfo = `
+                <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <strong>Backend Status:</strong> ${status.message}<br>
+                    <strong>Limitations:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        ${status.limitations.map(l => `<li>${l}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+    }
+    
     lobbyView.innerHTML = `
         <div style="text-align: center; padding: 40px;">
             <h2>Multiplayer Mode</h2>
             <div style="background: #f8f8f8; padding: 30px; border-radius: 10px; margin: 20px auto; max-width: 600px;">
                 <p style="font-size: 18px; color: #666; margin-bottom: 20px;">
-                    Multiplayer requires a game server to be running.
+                    Real-time multiplayer requires WebSocket support.
                 </p>
+                ${backendInfo}
                 <p style="color: #999; margin-bottom: 20px;">
-                    This is a static deployment on Cloudflare Pages. To play multiplayer:
+                    Cloudflare's free tier doesn't support WebSockets. To play multiplayer:
                 </p>
                 <ol style="text-align: left; display: inline-block; color: #666;">
                     <li>Clone the repository locally</li>
@@ -513,11 +532,19 @@ function showBackendNotice() {
                     <li>Run <code>npm run start:multiplayer</code></li>
                     <li>Open <code>http://localhost:3000/multiplayer.html</code></li>
                 </ol>
+                <div style="margin-top: 20px; padding: 15px; background: #e8f4fd; border-radius: 5px;">
+                    <strong>Alternative Options:</strong>
+                    <ul style="text-align: left; display: inline-block; margin: 10px 0;">
+                        <li>Deploy to Heroku, Railway, or Render (free tiers available)</li>
+                        <li>Use a VPS from DigitalOcean or Linode</li>
+                        <li>Upgrade to Cloudflare paid plan for Durable Objects</li>
+                    </ul>
+                </div>
                 <p style="margin-top: 30px;">
                     <a href="/" class="btn btn-primary">Play vs AI Instead</a>
                 </p>
                 <p style="margin-top: 15px; font-size: 14px; color: #999;">
-                    Or deploy your own backend server to enable online multiplayer.
+                    Single-player vs AI works perfectly on this deployment!
                 </p>
             </div>
         </div>
