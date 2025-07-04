@@ -31,6 +31,17 @@ const chatMessages = document.getElementById('chat-messages');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if multiplayer is available
+    if (!window.gameConfig.hasBackendConfigured()) {
+        showError('Multiplayer requires a backend server. Please run locally or configure a backend URL in config.js');
+        // Disable create/join buttons
+        createRoomBtn.disabled = true;
+        joinRoomBtn.disabled = true;
+        createRoomBtn.textContent = 'Backend Required';
+        joinRoomBtn.textContent = 'Backend Required';
+        return;
+    }
+    
     setupEventListeners();
     loadPlayerName();
     requestRoomsList();
