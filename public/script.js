@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io(window.gameConfig ? window.gameConfig.getSocketUrl() : window.location.origin);
 
 let gameState = null;
 let boardSize = 9;

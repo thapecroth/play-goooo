@@ -1,6 +1,6 @@
 // Multiplayer Go Game Client
 
-const socket = io();
+const socket = io(window.gameConfig ? window.gameConfig.getSocketUrl() : window.location.origin);
 
 // Game state
 let currentRoom = null;
