@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Game - Multiplayer UI Preview</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/multiplayer-modern.css">
+    <script>
+        // Mock config for preview
+        window.gameConfig = {
+            backendApiUrl: 'https://go-game-backend-sqlite-production.thapecroth.workers.dev'
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header-controls">
+            <h1>Go Online</h1>
+            <div class="header-buttons">
+                <span id="connection-status" class="connection-status online">Online</span>
+                <button id="sound-toggle" class="btn btn-small" title="Toggle sound effects">🔊 Sound</button>
+            </div>
+        </div>
+        
+        <!-- Preview of Lobby View -->
+        <div id="lobby-view" class="view">
+            <div class="player-info">
+                <label for="player-name">Enter Your Name</label>
+                <input type="text" id="player-name" placeholder="Anonymous Player" maxlength="20" autocomplete="name" value="Player1">
+            </div>
+            
+            <div class="lobby-options">
+                <div class="create-game-section">
+                    <h2>🎮 Create New Game</h2>
+                    <div class="form-group">
+                        <label for="new-board-size">Board Size</label>
+                        <select id="new-board-size">
+                            <option value="9" selected>9×9 (Quick Game)</option>
+                            <option value="13">13×13 (Medium)</option>
+                            <option value="19">19×19 (Full Board)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label style="position: static; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="vs-ai" style="width: auto; margin: 0;"> 
+                            <span>Play against AI</span>
+                        </label>
+                    </div>
+                    <button id="create-room" class="btn btn-primary" style="width: 100%; margin-top: 24px;">Create Game</button>
+                </div>
+                
+                <div class="join-game-section">
+                    <h2>🎯 Join Game</h2>
+                    <div class="form-group">
+                        <label for="room-code">Room Code</label>
+                        <div style="display: flex; gap: 12px; margin-top: 12px;">
+                            <input type="text" id="room-code" placeholder="ABC123" maxlength="6" style="flex: 1;">
+                            <button id="join-room" class="btn btn-secondary">Join</button>
+                        </div>
+                    </div>
+                    
+                    <div class="public-rooms">
+                        <h3>🌐 Public Games</h3>
+                        <div id="rooms-list" class="rooms-list">
+                            <!-- Sample room items -->
+                            <div class="room-item">
+                                <div class="room-item-header">
+                                    <span class="room-item-id">GAME01</span>
+                                    <span class="room-item-board">9×9</span>
+                                </div>
+                                <div class="room-item-players">Alice vs Bob - In Progress</div>
+                            </div>
+                            <div class="room-item">
+                                <div class="room-item-header">
+                                    <span class="room-item-id">QUICK2</span>
+                                    <span class="room-item-board">9×9</span>
+                                </div>
+                                <div class="room-item-players">Waiting for opponent...</div>
+                            </div>
+                            <div class="room-item">
+                                <div class="room-item-header">
+                                    <span class="room-item-id">PRO123</span>
+                                    <span class="room-item-board">19×19</span>
+                                </div>
+                                <div class="room-item-players">Master vs Student - Turn 45</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Preview of Game View -->
+        <div id="game-view-preview" class="view" style="margin-top: 60px;">
+            <h2 style="text-align: center; margin-bottom: 30px;">Game View Preview</h2>
+            
+            <div class="game-header">
+                <div class="room-info">
+                    <span style="font-size: 16px; color: var(--gray-600);">Room Code</span>
+                    <strong id="room-id-display">ABC123</strong>
+                    <button id="copy-room-code" class="btn btn-small">📋 Copy</button>
+                </div>
+                <button id="leave-game" class="btn btn-danger btn-small">⬅️ Leave Game</button>
+            </div>
+            
+            <div class="game-info">
+                <div class="scores">
+                    <div class="score black-score active">
+                        <span class="player-name">Black (Alice) <strong>(You)</strong></span>
+                        <span class="captures">Captures: <span>2</span></span>
+                        <span class="player-status connected">● Connected</span>
+                    </div>
+                    <div class="current-player">
+                        <span style="font-size: 14px; color: var(--gray-500);">Current Turn</span>
+                        <span style="font-size: 24px;">Black</span>
+                    </div>
+                    <div class="score white-score">
+                        <span class="player-name">White (Bob)</span>
+                        <span class="captures">Captures: <span>1</span></span>
+                        <span class="player-status connected">● Connected</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="board-container">
+                <div style="width: 300px; height: 300px; background: var(--board-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--gray-600);">
+                    Go Board Preview
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-secondary">⏭️ Pass Turn</button>
+                <button class="btn btn-danger">🏳️ Resign</button>
+            </div>
+            
+            <div class="game-status">
+                <div class="status-info">Game in progress - Turn 15</div>
+            </div>
+            
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <h3>💬 Game Chat</h3>
+                <div id="chat-messages" class="chat-messages">
+                    <div class="chat-message">
+                        <span class="chat-message-time">10:23 AM</span>
+                        <span class="chat-message-header">Alice:</span>
+                        <span class="chat-message-text">Good game!</span>
+                    </div>
+                    <div class="chat-message">
+                        <span class="chat-message-time">10:24 AM</span>
+                        <span class="chat-message-header">Bob:</span>
+                        <span class="chat-message-text">Thanks! Nice opening 😊</span>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="chat-input" placeholder="Say something nice..." maxlength="200">
+                    <button id="send-chat" class="btn btn-primary btn-small">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Add some basic interactivity for preview
+        document.addEventListener('DOMContentLoaded', function() {
+            // Room item hover effects
+            const roomItems = document.querySelectorAll('.room-item');
+            roomItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    alert('In the real app, this would join the game!');
+                });
+            });
+            
+            // Button click effects
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (!e.target.closest('.room-item')) {
+                        e.target.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            e.target.style.transform = '';
+                        }, 100);
+                    }
+                });
+            });
+            
+            // Room code formatting
+            const roomCodeInput = document.getElementById('room-code');
+            roomCodeInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            });
+        });
+    </script>
+</body>
+</html>

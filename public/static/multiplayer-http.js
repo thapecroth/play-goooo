@@ -676,16 +676,43 @@ function copyRoomCode() {
 }
 
 function showStatus(message, type = 'info') {
+    // Use the enhanced notification if available
+    if (window.multiplayerUIEnhancements && window.multiplayerUIEnhancements.showNotification) {
+        window.multiplayerUIEnhancements.showNotification(message, type);
+    }
+    
     const statusDiv = document.createElement('div');
     statusDiv.className = `status-${type}`;
     statusDiv.textContent = message;
+    statusDiv.style.animation = 'slideIn 0.3s ease';
     
     statusMessage.innerHTML = '';
     statusMessage.appendChild(statusDiv);
     
+    // Play sound effect based on type
+    if (window.gameSounds && window.gameSounds.enabled) {
+        switch(type) {
+            case 'success':
+                window.gameSounds.play('capture'); // Use capture sound for success
+                break;
+            case 'error':
+                window.gameSounds.play('invalid'); // Need to add invalid sound
+                break;
+            case 'warning':
+            case 'info':
+                window.gameSounds.play('click');
+                break;
+        }
+    }
+    
     setTimeout(() => {
         if (statusMessage.firstChild === statusDiv) {
-            statusMessage.innerHTML = '';
+            statusDiv.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                if (statusMessage.firstChild === statusDiv) {
+                    statusMessage.innerHTML = '';
+                }
+            }, 300);
         }
     }, 3000);
 }
